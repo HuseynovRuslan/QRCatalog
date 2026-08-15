@@ -1,10 +1,23 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import RequireAuth from './components/RequireAuth'
+import Shell from './components/Shell'
+
 export default function App() {
   return (
-    <main style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', fontFamily: 'system-ui' }}>
-      <div style={{ textAlign: 'center' }}>
-        <h1 style={{ margin: 0 }}>QrCatalog Admin</h1>
-        <p style={{ color: '#666' }}>M1-də giriş və panel gələcək.</p>
-      </div>
-    </main>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        element={
+          <RequireAuth>
+            <Shell />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   )
 }

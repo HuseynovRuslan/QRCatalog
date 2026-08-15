@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using QrCatalog.Application.Abstractions;
+using QrCatalog.Infrastructure.Identity;
 using QrCatalog.Infrastructure.Persistence;
 using QrCatalog.Infrastructure.Tenancy;
 
@@ -23,7 +27,52 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
 
+        services.AddIdentityAuth();
+
         return services;
+    }
+
+    private static void AddIdentityAuth(this IServiceCollection services)
+    {
+        services.AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            })
+            .AddRoles<ApplicationRole>()
+            .AddEntityFrameworkStores<AppDbContext>()
+            .AddSignInManager()
+            .AddClaimsPrincipalFactory<AppClaimsPrincipalFactory>()
+            .AddDefaultTokenProviders();
+
+        services.AddAuthentication(IdentityConstants.ApplicationScheme)
+            .AddIdentityCookies();
+
+        services.ConfigureApplicationCookie(options =>
+        {
+            options.Cookie.Name = "qrcatalog.auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            // M8: Caddy arxasında ForwardedHeaders qoşulanda Always olacaq
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.SlidingExpiration = true;
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+
+            // SPA/API cookie sxemində redirect mənasızdır — status kodu qaytar
+            options.Events.OnRedirectToLogin = ctx =>
+            {
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            };
+            options.Events.OnRedirectToAccessDenied = ctx =>
+            {
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            };
+        });
     }
 
     /// <summary>

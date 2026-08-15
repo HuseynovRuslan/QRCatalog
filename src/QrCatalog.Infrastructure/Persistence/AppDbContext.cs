@@ -1,12 +1,15 @@
 using System.Linq.Expressions;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using QrCatalog.Application.Abstractions;
 using QrCatalog.Domain.Common;
 using QrCatalog.Domain.Entities;
+using QrCatalog.Infrastructure.Identity;
 
 namespace QrCatalog.Infrastructure.Persistence;
 
-public sealed class AppDbContext : DbContext
+public sealed class AppDbContext
+    : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
 {
     private readonly ITenantContext _tenant;
 
@@ -20,6 +23,17 @@ public sealed class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder); // Identity cədvəlləri
+
+        modelBuilder.Entity<ApplicationUser>(b =>
+        {
+            b.Property(u => u.DisplayName).HasMaxLength(200);
+            b.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(u => u.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<Company>(b =>
         {
             b.Property(c => c.Name).HasMaxLength(200).IsRequired();
