@@ -1,0 +1,43 @@
+@page "/q/{token}"
+@model QrCatalog.Web.Pages.QModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="flex min-h-screen items-center justify-center px-4">
+    <div class="w-full max-w-md text-center">
+        @if (Model.State == QrCatalog.Web.Pages.QState.Found)
+        {
+            <p class="font-mono text-sm text-stone-400">@Model.HumanCode</p>
+            <h1 class="mt-2 text-2xl font-semibold tracking-tight">@Model.TargetName</h1>
+            @if (Model.TargetDescription is not null)
+            {
+                <p class="mt-3 text-stone-600">@Model.TargetDescription</p>
+            }
+            <p class="mt-6 text-sm text-stone-400">
+                Tam məhsul səhifəsi hazırlanır — M5 mərhələsində bu ünvanda kataloq açılacaq.
+            </p>
+        }
+        else if (Model.State == QrCatalog.Web.Pages.QState.Retired)
+        {
+            <h1 class="text-2xl font-semibold tracking-tight">Bu kod artıq istifadədə deyil</h1>
+            <p class="mt-3 text-stone-600">
+                Məhsul haqqında məlumat üçün satıcı ilə əlaqə saxlayın.
+            </p>
+        }
+        else if (Model.State == QrCatalog.Web.Pages.QState.Archived)
+        {
+            <h1 class="text-2xl font-semibold tracking-tight">Bu model artıq istehsal olunmur</h1>
+            <p class="mt-3 text-stone-600">
+                Oxşar modellər üçün satıcı ilə əlaqə saxlayın — kataloq səhifəsi M5-də açılacaq.
+            </p>
+        }
+        else
+        {
+            <h1 class="text-2xl font-semibold tracking-tight">Kod tapılmadı</h1>
+            <p class="mt-3 text-stone-600">
+                Bu QR kod sistemdə qeydiyyatda deyil. Ünvanı yoxlayın və ya satıcı ilə əlaqə saxlayın.
+            </p>
+        }
+    </div>
+</div>

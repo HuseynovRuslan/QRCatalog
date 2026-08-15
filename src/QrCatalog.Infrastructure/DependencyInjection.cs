@@ -17,9 +17,12 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException(
-                "ConnectionStrings:DefaultConnection tapılmadı — appsettings və ya env dəyişənini yoxla.");
+        // Boş sətir də rədd edilir: appsettings-də açar "" ilə mövcuddursa, ?? null-guard
+        // keçərdi və tətbiq işlək görünərdi — konfiqurasiya xətası fail-fast olmalıdır.
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection boşdur və ya yoxdur — appsettings və ya env dəyişənini yoxla.");
 
         services.AddScoped<AmbientTenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<AmbientTenantContext>());
@@ -27,7 +30,14 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
 
+        // Health check bağlantı sətri ilə birlikdə burada qeydiyyata alınır ki,
+        // "sətir var amma check yoxdur" uyğunsuzluğu mümkün olmasın
+        services.AddHealthChecks().AddNpgSql(connectionString, name: "postgres");
+
         services.AddIdentityAuth();
+
+        services.AddSingleton<Qr.QrImageService>();
+        services.AddSingleton<Qr.LabelSheetService>();
 
         return services;
     }
@@ -77,19 +87,27 @@ public static class DependencyInjection
 
     /// <summary>
     /// Migration-ları startup-da tətbiq edir. Baza hələ qalxmayıbsa bir neçə dəfə yenidən cəhd edir;
-    /// alınmasa tətbiq YIXILMIR — sayt işləyir, /health qırmızı qalır və problem orada görünür.
+    /// alınmasa tətbiq YIXILMIR — sayt qalxır, /health qırmızı qalır və problem orada görünür.
+    /// QƏSDƏN retry-siz ayrıca DbContext işlədilir: DI-dakı EnableRetryOnFailure ilə MigrateAsync
+    /// iç-içə retry edərdi (hər xarici cəhdin daxilində ~1 dəqiqəlik seriya) və DB sönülü olanda
+    /// startup dəqiqələrlə bloklanardı. İndi ən pis hal ≈ 5×(qoşulma taymautu+3s).
     /// </summary>
     public static async Task MigrateDatabaseAsync(this IServiceProvider services, int attempts = 5)
     {
         using var scope = services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("Migrations");
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(config.GetConnectionString("DefaultConnection"))
+            .Options;
 
         for (var attempt = 1; attempt <= attempts; attempt++)
         {
             try
             {
+                await using var db = new AppDbContext(options, NullTenantContext.Instance);
                 await db.Database.MigrateAsync();
                 logger.LogInformation("Migration-lar tətbiq olundu (cəhd {Attempt}).", attempt);
                 return;

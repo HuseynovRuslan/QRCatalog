@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\QrCatalog.Domain\QrCatalog.Domain.csproj" />
     <ProjectReference Include="..\..\src\QrCatalog.Application\QrCatalog.Application.csproj" />
+    <ProjectReference Include="..\..\src\QrCatalog.Infrastructure\QrCatalog.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

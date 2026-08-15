@@ -5,7 +5,7 @@ const nav = [
   { to: '/', label: 'Panel', enabled: true },
   { to: '/mehsullar', label: 'Məhsullar', enabled: false },
   { to: '/kateqoriyalar', label: 'Kateqoriyalar', enabled: true },
-  { to: '/qr', label: 'QR kodlar', enabled: false },
+  { to: '/qr', label: 'QR kodlar', enabled: true },
   { to: '/muracietler', label: 'Müraciətlər', enabled: false },
 ]
 

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using QrCatalog.Application.Abstractions;
+using QrCatalog.Infrastructure.Tenancy;
 
 namespace QrCatalog.Infrastructure.Persistence;
 
@@ -15,11 +15,6 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
             .UseNpgsql("Host=localhost;Database=qrcatalog_design;Username=postgres;Password=postgres")
             .Options;
 
-        return new AppDbContext(options, new DesignTimeTenantContext());
-    }
-
-    private sealed class DesignTimeTenantContext : ITenantContext
-    {
-        public Guid? CompanyId => null;
+        return new AppDbContext(options, NullTenantContext.Instance);
     }
 }

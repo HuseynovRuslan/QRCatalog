@@ -4,8 +4,11 @@ using QrCatalog.Infrastructure;
 using QrCatalog.Infrastructure.Identity;
 using QrCatalog.Web.Api;
 using QrCatalog.Web.Infrastructure;
+using QuestPDF.Infrastructure;
 using Scalar.AspNetCore;
 using Serilog;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -37,12 +40,17 @@ try
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1),
             }));
+        // Public QR həlli — token gəzmə cəhdini boğur, normal skan axınına toxunmur
+        options.AddPolicy("qr-resolve", context => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+            }));
     });
 
-    var healthChecks = builder.Services.AddHealthChecks();
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    if (!string.IsNullOrEmpty(connectionString))
-        healthChecks.AddNpgSql(connectionString, name: "postgres");
+    // Health check-lər (postgres daxil) AddInfrastructure-da qeydiyyata alınır
 
     var app = builder.Build();
 
@@ -67,6 +75,7 @@ try
     app.MapRazorPages().WithStaticAssets();
     app.MapAuthEndpoints();
     app.MapCategoryEndpoints();
+    app.MapQrCodeEndpoints();
     app.MapHealthChecks("/health");
 
     // Admin SPA — dərin linklər (/admin/mehsullar və s.) index.html-ə düşür, marşrutu React həll edir

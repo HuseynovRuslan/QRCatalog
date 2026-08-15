@@ -21,6 +21,7 @@ public sealed class AppDbContext
 
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<QrCode> QrCodes => Set<QrCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,26 @@ public sealed class AppDbContext
                 .WithMany()
                 .HasForeignKey(c => c.ParentId)
                 .OnDelete(DeleteBehavior.Restrict); // uşağı olan kateqoriya DB səviyyəsində də silinmir
+        });
+
+        modelBuilder.Entity<QrCode>(b =>
+        {
+            b.Property(q => q.Token).HasMaxLength(24).IsRequired();
+            b.Property(q => q.HumanCode).HasMaxLength(12).IsRequired();
+            b.Property(q => q.Prefix).HasMaxLength(4).IsRequired();
+
+            // Token QLOBAL unikaldır — URL bütün müəssisələr üzrə ortaqdır.
+            // /q/{token} qaynar yolunun yeganə axtarış açarı budur.
+            b.HasIndex(q => q.Token).IsUnique();
+
+            // İnsan-oxunan kod isə müəssisə daxilində unikaldır
+            b.HasIndex(q => new { q.CompanyId, q.HumanCode }).IsUnique();
+            b.HasIndex(q => new { q.CompanyId, q.Prefix, q.Sequence });
+
+            b.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(q => q.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         ApplyTenantFilters(modelBuilder);
