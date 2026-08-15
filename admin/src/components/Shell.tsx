@@ -7,6 +7,7 @@ const nav = [
   { to: '/kateqoriyalar', label: 'Kateqoriyalar', enabled: true },
   { to: '/qr', label: 'QR kodlar', enabled: true },
   { to: '/muracietler', label: 'Müraciətlər', enabled: false },
+  { to: '/parametrler', label: 'Parametrlər', enabled: true },
 ]
 
 export default function Shell() {

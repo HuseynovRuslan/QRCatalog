@@ -1,0 +1,76 @@
+@page "/katalog/{slug}"
+@model QrCatalog.Web.Pages.Catalog.CategoryModel
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="mx-auto max-w-4xl px-4 py-6">
+    <nav aria-label="Yol" class="text-xs text-stone-400">
+        @for (var i = 0; i < Model.Breadcrumbs.Count; i++)
+        {
+            var crumb = Model.Breadcrumbs[i];
+            if (crumb.Url is null)
+            {
+                <span class="text-stone-600">@crumb.Name</span>
+            }
+            else
+            {
+                <a href="@crumb.Url" class="hover:text-emerald-800 hover:underline">@crumb.Name</a>
+            }
+            @if (i < Model.Breadcrumbs.Count - 1)
+            {
+                <span aria-hidden="true"> › </span>
+            }
+        }
+    </nav>
+
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">@Model.Name</h1>
+    @if (Model.Description is not null)
+    {
+        <p class="mt-2 text-stone-600">@Model.Description</p>
+    }
+
+    @if (Model.Children.Count > 0)
+    {
+        <div class="mt-4 flex flex-wrap gap-2">
+            @foreach (var child in Model.Children)
+            {
+                <a href="/katalog/@child.Slug"
+                   class="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm hover:border-emerald-700/40">
+                    @child.Name <span class="text-stone-400">@child.ProductCount</span>
+                </a>
+            }
+        </div>
+    }
+
+    @if (Model.Products.Count == 0 && Model.Children.Count == 0)
+    {
+        <p class="mt-10 text-center text-sm text-stone-400">Bu kateqoriyada hələ məhsul yoxdur.</p>
+    }
+    else if (Model.Products.Count > 0)
+    {
+        <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            @foreach (var card in Model.Products)
+            {
+                <partial name="_ProductCard" model="card" />
+            }
+        </div>
+    }
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="mt-8 flex items-center justify-center gap-3 text-sm" aria-label="Səhifələr">
+            @if (Model.CurrentPage > 1)
+            {
+                <a href="/katalog/@Model.Slug?seh=@(Model.CurrentPage - 1)"
+                   class="rounded border border-stone-300 px-3 py-1.5 hover:bg-stone-50">‹ Əvvəlki</a>
+            }
+            <span class="tabular-nums text-stone-500">@Model.CurrentPage / @Model.TotalPages</span>
+            @if (Model.CurrentPage < Model.TotalPages)
+            {
+                <a href="/katalog/@Model.Slug?seh=@(Model.CurrentPage + 1)"
+                   class="rounded border border-stone-300 px-3 py-1.5 hover:bg-stone-50">Növbəti ›</a>
+            }
+        </nav>
+    }
+</div>

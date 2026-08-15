@@ -1,0 +1,106 @@
+@model QrCatalog.Web.Pages.PublicProductVm
+
+<article class="mx-auto max-w-2xl px-4 pb-24 pt-6">
+    <nav aria-label="Yol" class="text-xs text-stone-400">
+        <a href="/katalog" class="hover:text-emerald-800 hover:underline">Kataloq</a>
+        <span aria-hidden="true"> › </span>
+        <a href="/katalog/@Model.CategorySlug" class="hover:text-emerald-800 hover:underline">@Model.CategoryName</a>
+    </nav>
+
+    @if (Model.Images.Count > 0)
+    {
+        <div class="mt-4">
+            <img id="main-image"
+                 src="@Model.Images[0].MainUrl"
+                 srcset="@Model.Images[0].Srcset"
+                 sizes="(max-width: 672px) 100vw, 672px"
+                 alt="@(Model.Images[0].Alt ?? Model.Name)"
+                 class="aspect-[4/3] w-full rounded-xl bg-stone-100 object-cover" />
+
+            @if (Model.Images.Count > 1)
+            {
+                <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
+                    @for (var i = 0; i < Model.Images.Count; i++)
+                    {
+                        var image = Model.Images[i];
+                        <button type="button"
+                                class="thumb h-16 w-16 flex-none overflow-hidden rounded-lg border-2 @(i == 0 ? "border-emerald-700" : "border-transparent")"
+                                data-src="@image.MainUrl" data-srcset="@image.Srcset"
+                                data-alt="@(image.Alt ?? Model.Name)"
+                                aria-label="Şəkil @(i + 1)">
+                            <img src="@image.ThumbUrl" alt="" loading="lazy"
+                                 class="h-full w-full object-cover" />
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.HumanCode is not null)
+    {
+        <p class="mt-5 font-mono text-xs tracking-wide text-stone-400">@Model.HumanCode</p>
+    }
+    <h1 class="mt-1 text-2xl font-semibold tracking-tight text-balance">@Model.Name</h1>
+
+    @if (Model.Description is not null)
+    {
+        <p class="mt-3 leading-relaxed text-stone-600">@Model.Description</p>
+    }
+
+    @if (Model.Specs.Count > 0)
+    {
+        <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-stone-400">
+            Texniki göstəricilər
+        </h2>
+        <dl class="mt-2 divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white">
+            @foreach (var spec in Model.Specs)
+            {
+                <div class="flex justify-between gap-4 px-4 py-2.5 text-sm">
+                    <dt class="text-stone-500">@spec.Label</dt>
+                    <dd class="text-right font-medium">@spec.Value</dd>
+                </div>
+            }
+        </dl>
+    }
+
+    @if (Model.WhatsappUrl is not null || Model.Phone is not null)
+    {
+        <div class="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 p-3 backdrop-blur">
+            <div class="mx-auto flex max-w-2xl gap-2">
+                @if (Model.WhatsappUrl is not null)
+                {
+                    <a href="@Model.WhatsappUrl"
+                       class="flex-1 rounded-lg bg-emerald-800 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-700">
+                        Qiymət və sifariş — WhatsApp
+                    </a>
+                }
+                @if (Model.Phone is not null)
+                {
+                    <a href="tel:@Model.Phone"
+                       class="rounded-lg border border-emerald-800 px-4 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">
+                        Zəng et
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</article>
+
+<script>
+    // Qalereya: thumbnail → əsas şəkil. Framework yükü yoxdur — 3G-də hər KB sayılır.
+    document.querySelectorAll('.thumb').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var main = document.getElementById('main-image');
+            main.src = btn.dataset.src;
+            main.srcset = btn.dataset.srcset;
+            main.alt = btn.dataset.alt;
+            document.querySelectorAll('.thumb').forEach(function (b) {
+                b.classList.remove('border-emerald-700');
+                b.classList.add('border-transparent');
+            });
+            btn.classList.remove('border-transparent');
+            btn.classList.add('border-emerald-700');
+        });
+    });
+</script>

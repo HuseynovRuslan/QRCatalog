@@ -1,8 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using QrCatalog.Application.Abstractions;
 using QrCatalog.Domain.Entities;
 using QrCatalog.Infrastructure.Persistence;
+using QrCatalog.Web.Infrastructure;
 
 namespace QrCatalog.Web.Pages;
 
@@ -15,25 +19,32 @@ public enum QState
 }
 
 /// <summary>
-/// Public QR həlli — `/q/{token}`. Skan edən qonağın heç bir müəssisə konteksti yoxdur,
-/// token isə QLOBAL unikaldır; ona görə bu sorğu tenant filtrini QƏSDƏN keçir.
-/// Bu, layihədə IgnoreQueryFilters-in icazəli olduğu YEGANƏ public yoldur —
-/// cavaba yalnız public sahələr düşür, qiymət/daxili məlumat burada heç sorğulanmır.
+/// Public QR həlli — `/q/{token}`. Skan edən qonağın müəssisə konteksti yoxdur,
+/// token isə QLOBAL unikaldır; ona görə buradakı sorğular tenant filtrini QƏSDƏN keçir
+/// (bax: PublicCatalogQueries sənədi — icazəli iki yerdən biri).
+/// Cavaba yalnız public sahələr düşür — qiymət və daxili məlumat strukturda yoxdur.
 /// </summary>
+[EnableRateLimiting("qr-resolve")]
+[OutputCache(PolicyName = "public")]
 public sealed class QModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IFileStorage _storage;
 
-    public QModel(AppDbContext db) => _db = db;
+    public QModel(AppDbContext db, IFileStorage storage)
+    {
+        _db = db;
+        _storage = storage;
+    }
 
     public QState State { get; private set; } = QState.NotFound;
     public string? HumanCode { get; private set; }
-    public string? TargetName { get; private set; }
-    public string? TargetDescription { get; private set; }
+    public PublicProductVm? Product { get; private set; }
+    public List<PublicProductCardVm> Similar { get; private set; } = [];
 
     public string Title => State switch
     {
-        QState.Found => TargetName ?? "Məhsul",
+        QState.Found => Product?.Name ?? "Məhsul",
         QState.Retired => "Kod istifadədə deyil",
         QState.Archived => "Model istehsal olunmur",
         _ => "Kod tapılmadı",
@@ -48,7 +59,7 @@ public sealed class QModel : PageModel
         }
 
         var qrCode = await _db.QrCodes
-            .IgnoreQueryFilters() // bax: sinif sənədi — public cross-tenant həll nöqtəsi
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Token == token);
 
@@ -68,57 +79,37 @@ public sealed class QModel : PageModel
 
         switch (qrCode.TargetType)
         {
-            case QrTargetType.Archive:
-                State = QState.Archived;
-                return Page();
-
             case QrTargetType.Category:
-                var category = await _db.Categories
-                    .IgnoreQueryFilters() // eyni istisna — hədəf başqa cür tapıla bilməz
-                    .AsNoTracking()
+                var categorySlug = await _db.Categories.IgnoreQueryFilters().AsNoTracking()
                     .Where(c => c.Id == qrCode.TargetId && c.CompanyId == qrCode.CompanyId)
-                    .Select(c => new { c.Name, c.Description })
+                    .Select(c => c.Slug)
                     .FirstOrDefaultAsync();
-
-                if (category is null)
-                {
-                    State = QState.Archived; // hədəf silinibsə arxiv davranışı — 404 yox
-                    return Page();
-                }
-
-                State = QState.Found;
-                TargetName = category.Name;
-                TargetDescription = category.Description;
-                return Page();
-
-            case QrTargetType.Product:
-                var product = await _db.Products
-                    .IgnoreQueryFilters() // eyni istisna — bax: sinif sənədi
-                    .AsNoTracking()
-                    .Where(p => p.Id == qrCode.TargetId && p.CompanyId == qrCode.CompanyId)
-                    .Select(p => new
-                    {
-                        p.Status,
-                        Name = p.Translations
-                            .Where(t => t.Lang == "az").Select(t => t.Name).FirstOrDefault(),
-                        Description = p.Translations
-                            .Where(t => t.Lang == "az").Select(t => t.Description).FirstOrDefault(),
-                    })
-                    .FirstOrDefaultAsync();
-
-                // Draft qonaq üçün hələ mövcud deyil, silinmiş/arxiv "istehsal olunmur" —
-                // çap olunmuş etiket heç vaxt 404 görməməlidir
-                if (product is null || product.Status != ProductStatus.Published)
+                if (categorySlug is null)
                 {
                     State = QState.Archived;
                     return Page();
                 }
+                return Redirect($"/katalog/{categorySlug}");
 
-                State = QState.Found;
-                TargetName = product.Name;
-                TargetDescription = product.Description;
+            case QrTargetType.Product:
+                var load = await PublicCatalogQueries.LoadProductAsync(
+                    _db, _storage, qrCode.CompanyId, id: qrCode.TargetId, humanCode: qrCode.HumanCode);
+
+                if (load?.Product is { } product)
+                {
+                    State = QState.Found;
+                    Product = product;
+                    return Page();
+                }
+
+                // Draft/Arxiv/silinmiş — çap olunmuş etiket heç vaxt 404 görməməlidir
+                State = QState.Archived;
+                if (load is not null)
+                    Similar = await PublicCatalogQueries.SimilarProductsAsync(
+                        _db, _storage, qrCode.CompanyId, load.CategoryId, qrCode.TargetId);
                 return Page();
 
+            case QrTargetType.Archive:
             default:
                 State = QState.Archived;
                 return Page();

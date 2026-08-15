@@ -28,8 +28,14 @@ public static class DependencyInjection
         services.AddScoped<AmbientTenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<AmbientTenantContext>());
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+
+            // Output cache qeydiyyatda yoxdursa (məs. dizayn-vaxtı) interceptor passiv qalır
+            options.AddInterceptors(new PublicCacheInvalidationInterceptor(
+                sp.GetService<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>()));
+        });
 
         // Health check bağlantı sətri ilə birlikdə burada qeydiyyata alınır ki,
         // "sətir var amma check yoxdur" uyğunsuzluğu mümkün olmasın

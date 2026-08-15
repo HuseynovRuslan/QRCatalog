@@ -33,6 +33,20 @@ try
 
     builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
+    // Public səhifələr: 5 dəq keş + "public" teqi. İstənilən public entity dəyişəndə
+    // PublicCacheInvalidationInterceptor teqi boşaldır — köhnə səhifə qalmır.
+    builder.Services.AddOutputCache(options =>
+        options.AddPolicy("public", policy => policy
+            .Expire(TimeSpan.FromMinutes(5))
+            .Tag(QrCatalog.Infrastructure.Persistence.PublicCacheInvalidationInterceptor.Tag)));
+
+    builder.Services.AddResponseCompression(options =>
+    {
+        options.EnableForHttps = true;
+        options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+        options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    });
+
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -66,6 +80,7 @@ try
     // TLS produksiyada Caddy-də bitir — konteynerlər öz aralarında düz HTTP danışır,
     // ona görə UseHttpsRedirection yoxdur.
 
+    app.UseResponseCompression();
     app.UseSerilogRequestLogging();
 
     // Lokal storage-da yüklənən şəkillər /uploads altından verilir.
@@ -85,6 +100,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.UseAntiforgery();
+    app.UseOutputCache();
     app.UseMiddleware<TenantResolutionMiddleware>();
 
     app.MapStaticAssets();
@@ -93,6 +109,7 @@ try
     app.MapCategoryEndpoints();
     app.MapProductEndpoints();
     app.MapQrCodeEndpoints();
+    app.MapSettingsEndpoints();
     app.MapHealthChecks("/health");
 
     // Admin SPA — dərin linklər (/admin/mehsullar və s.) index.html-ə düşür, marşrutu React həll edir

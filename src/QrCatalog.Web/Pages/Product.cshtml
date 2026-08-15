@@ -1,0 +1,31 @@
+@page "/p/{slug}"
+@model QrCatalog.Web.Pages.ProductModel
+@{
+    ViewData["Title"] = Model.Product?.Name ?? "Model istehsal olunmur";
+}
+
+@if (Model.Product is not null)
+{
+    <partial name="_ProductView" model="Model.Product" />
+}
+else if (Model.IsArchived)
+{
+    <div class="flex min-h-screen flex-col items-center justify-center px-4">
+        <div class="w-full max-w-md text-center">
+            <h1 class="text-2xl font-semibold tracking-tight">Bu model artıq istehsal olunmur</h1>
+            <p class="mt-3 text-stone-600">Oxşar modellərə baxın və ya satıcı ilə əlaqə saxlayın.</p>
+        </div>
+        @if (Model.Similar.Count > 0)
+        {
+            <div class="mt-10 w-full max-w-2xl">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-stone-400">Oxşar modellər</h2>
+                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @foreach (var card in Model.Similar)
+                    {
+                        <partial name="_ProductCard" model="card" />
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

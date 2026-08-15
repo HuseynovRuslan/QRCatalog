@@ -1,0 +1,20 @@
+@model QrCatalog.Web.Pages.PublicProductCardVm
+
+<a href="/p/@Model.Slug"
+   class="block overflow-hidden rounded-xl border border-stone-200 bg-white transition hover:border-emerald-700/40 hover:shadow-sm">
+    @if (Model.ThumbUrl is not null)
+    {
+        <img src="@Model.ThumbUrl" srcset="@Model.ThumbSrcset"
+             sizes="(max-width: 640px) 50vw, 200px"
+             alt="@Model.Name" loading="lazy"
+             class="aspect-square w-full bg-stone-100 object-cover" />
+    }
+    else
+    {
+        <div class="aspect-square w-full bg-stone-100"></div>
+    }
+    <div class="p-3">
+        <p class="line-clamp-2 text-sm font-medium">@Model.Name</p>
+        <p class="mt-0.5 text-xs text-stone-400">@Model.CategoryName</p>
+    </div>
+</a>
