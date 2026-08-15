@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Testcontainers.PostgreSql;
 
 namespace QrCatalog.IntegrationTests;
 
@@ -15,27 +14,21 @@ public sealed class PublicSiteTests : IAsyncLifetime
     private const string AdminEmail = "admin@test.az";
     private const string AdminPassword = "Passw0rd!23";
 
-    private static bool DockerAvailable =>
-        Environment.GetEnvironmentVariable("CI") == "true" ||
-        Environment.GetEnvironmentVariable("DOCKER_AVAILABLE") == "true";
-
-    private PostgreSqlContainer? _postgres;
+    private TestDatabase? _database;
     private WebApplicationFactory<Program>? _factory;
     private string? _storageRoot;
 
     public async Task InitializeAsync()
     {
-        if (!DockerAvailable)
-            return;
-
-        _postgres = new PostgreSqlBuilder("postgres:18-alpine").Build();
-        await _postgres.StartAsync();
+        _database = await TestDatabase.StartAsync();
+        if (_database is null)
+            return; // nə TEST_PG, nə Docker — test erkən çıxır
 
         _storageRoot = Path.Combine(Path.GetTempPath(), "qrcatalog-tests", Guid.NewGuid().ToString("N"));
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("ConnectionStrings:DefaultConnection", _postgres.GetConnectionString());
+            builder.UseSetting("ConnectionStrings:DefaultConnection", _database.ConnectionString);
             builder.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             builder.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             builder.UseSetting("Storage:Local:Root", _storageRoot);
@@ -46,7 +39,7 @@ public sealed class PublicSiteTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (_factory is not null) await _factory.DisposeAsync();
-        if (_postgres is not null) await _postgres.DisposeAsync();
+        if (_database is not null) await _database.DisposeAsync();
         if (_storageRoot is not null && Directory.Exists(_storageRoot))
             Directory.Delete(_storageRoot, recursive: true);
     }
@@ -124,7 +117,9 @@ public sealed class PublicSiteTests : IAsyncLifetime
         var productPage = await anon.GetStringAsync("/p/bahama-sezlonq");
         Assert.Contains("190×60 sm", productPage);
         Assert.Contains("wa.me/994501234567", productPage);
-        Assert.Contains("tel:+994501234567", productPage);
+        // Razor "+" işarəsini &#x2B; kimi kodlayır (brauzer onu düzgün açır) — testin
+        // niyyəti linkin özüdür, ona görə səhifə dekod olunub yoxlanılır
+        Assert.Contains("tel:+994501234567", System.Net.WebUtility.HtmlDecode(productPage));
 
         // 4. Qaralama məhsul qonaq üçün 404
         Assert.Equal(HttpStatusCode.NotFound,

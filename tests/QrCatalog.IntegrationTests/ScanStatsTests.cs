@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Testcontainers.PostgreSql;
 
 namespace QrCatalog.IntegrationTests;
 
@@ -15,24 +14,18 @@ public sealed class ScanStatsTests : IAsyncLifetime
     private const string AdminEmail = "admin@test.az";
     private const string AdminPassword = "Passw0rd!23";
 
-    private static bool DockerAvailable =>
-        Environment.GetEnvironmentVariable("CI") == "true" ||
-        Environment.GetEnvironmentVariable("DOCKER_AVAILABLE") == "true";
-
-    private PostgreSqlContainer? _postgres;
+    private TestDatabase? _database;
     private WebApplicationFactory<Program>? _factory;
 
     public async Task InitializeAsync()
     {
-        if (!DockerAvailable)
-            return;
-
-        _postgres = new PostgreSqlBuilder("postgres:18-alpine").Build();
-        await _postgres.StartAsync();
+        _database = await TestDatabase.StartAsync();
+        if (_database is null)
+            return; // nə TEST_PG, nə Docker — test erkən çıxır
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("ConnectionStrings:DefaultConnection", _postgres.GetConnectionString());
+            builder.UseSetting("ConnectionStrings:DefaultConnection", _database.ConnectionString);
             builder.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             builder.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             builder.UseEnvironment("Development");
@@ -42,7 +35,7 @@ public sealed class ScanStatsTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (_factory is not null) await _factory.DisposeAsync();
-        if (_postgres is not null) await _postgres.DisposeAsync();
+        if (_database is not null) await _database.DisposeAsync();
     }
 
     private async Task<HttpClient> LoginAsync()
@@ -96,7 +89,9 @@ public sealed class ScanStatsTests : IAsyncLifetime
         // Q səhifəsi beacon üçün tokeni data-atributda daşıyır (skript public.js-dədir)
         var page = await anon.GetStringAsync($"/q/{scanned.Token}");
         Assert.Contains($"data-qr-token=\"{scanned.Token}\"", page);
-        Assert.Contains("/js/public.js", page);
+        // MapStaticAssets skriptin adına barmaq izi əlavə edir (/js/public.<hash>.js) —
+        // keş üçün yaxşıdır, ona görə tam ada yox, prefiksə baxılır
+        Assert.Contains("/js/public", page);
 
         // 3 skan beacon-u (mobil UA ilə)
         for (var i = 0; i < 3; i++)
@@ -131,8 +126,10 @@ public sealed class ScanStatsTests : IAsyncLifetime
         Assert.Equal(1, dashboard.UnscannedCodes); // untouched hələ skan olunmayıb
 
         // Hesabat: günlük seriya + kod üzrə + skan olunmayanlar
-        var report = (await admin.GetFromJsonAsync<ScanReportResponse>(
-            "/api/admin/stats/scans?days=7"))!;
+        var reportRes = await admin.GetAsync("/api/admin/stats/scans?days=7");
+        Assert.True(reportRes.IsSuccessStatusCode,
+            $"Hesabat: {(int)reportRes.StatusCode} — {await reportRes.Content.ReadAsStringAsync()}");
+        var report = (await reportRes.Content.ReadFromJsonAsync<ScanReportResponse>())!;
         Assert.Equal(3, report.ByDay.Sum(d => d.Count));
         var codeRow = Assert.Single(report.ByCode);
         Assert.Equal(scanned.HumanCode, codeRow.HumanCode);

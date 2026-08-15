@@ -18,6 +18,16 @@ public sealed class LabelSheetService
     private const int Columns = 3;
     private const int RowsPerPage = 7;
 
+    // 3×63.5 = 190.5mm və 7×38.1 = 266.7mm A4-ün faydalı sahəsini PUNKT-PUNKT doldurur.
+    // QuestPDF A4-ü 595.28×841.89 punkt sayır (≈209.999×296.999mm), ona görə dəqiq
+    // mərkəzləşdirilmiş kənarlarda cədvəl 0.3 punkt sığmır və "Wrap" → DocumentLayoutException.
+    // Ehtiyat payı YALNIZ sağ və aşağı kənardan verilir: sol-yuxarı bucaq dəqiq qalmalıdır,
+    // çünki etiketlərin fiziki kəsik xətti oradan başlayır.
+    private const float LayoutToleranceMm = 1f;
+
+    private const float LeftMarginMm = (210f - Columns * LabelWidthMm) / 2;
+    private const float TopMarginMm = (297f - RowsPerPage * LabelHeightMm) / 2;
+
     private readonly QrImageService _qrImages;
 
     public LabelSheetService(QrImageService qrImages) => _qrImages = qrImages;
@@ -31,8 +41,10 @@ public sealed class LabelSheetService
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.MarginHorizontal((210 - Columns * LabelWidthMm) / 2, Unit.Millimetre);
-                    page.MarginVertical((297 - RowsPerPage * LabelHeightMm) / 2, Unit.Millimetre);
+                    page.MarginLeft(LeftMarginMm, Unit.Millimetre);
+                    page.MarginTop(TopMarginMm, Unit.Millimetre);
+                    page.MarginRight(LeftMarginMm - LayoutToleranceMm, Unit.Millimetre);
+                    page.MarginBottom(TopMarginMm - LayoutToleranceMm, Unit.Millimetre);
 
                     page.Content().Table(table =>
                     {
@@ -60,8 +72,9 @@ public sealed class LabelSheetService
                                         .AlignMiddle()
                                         .Column(col =>
                                         {
-                                            // FontFamily QƏSDƏN verilmir: Consolas Linux serverdə
-                                            // yoxdur və QuestPDF exception atırdı (ilk CI run tapdı)
+                                            // FontFamily QƏSDƏN verilmir: Consolas serverdə
+                                            // (Linux konteyner) yoxdur — sistem şriftinə bel
+                                            // bağlamaq çapı mühitdən asılı edərdi
                                             col.Item().Text(item.HumanCode)
                                                 .Bold().FontSize(12);
                                             col.Item().PaddingTop(1, Unit.Millimetre)

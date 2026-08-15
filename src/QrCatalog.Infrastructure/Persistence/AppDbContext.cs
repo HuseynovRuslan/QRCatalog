@@ -185,7 +185,33 @@ public sealed class AppDbContext
             b.HasIndex(a => new { a.CompanyId, a.OccurredAtUtc });
         });
 
+        DeclareClientAssignedKeys(modelBuilder);
         ApplyTenantFilters(modelBuilder);
+    }
+
+    /// <summary>
+    /// Domen entity-lərinin Guid açarını fabrik metodu verir — bazada generasiya OLUNMUR.
+    /// Bunu modeldə bildirmək məcburidir: əks halda EF mövcud valideynə əlavə olunan uşağı
+    /// (məs. <c>product.Specs.Add(...)</c>) "açarı doludur, deməli mövcud sətirdir" deyə
+    /// Added yerinə Modified sayır, INSERT əvəzinə UPDATE göndərir və 0 sətir dəyişdiyi üçün
+    /// DbUpdateConcurrencyException atır. İlk CI işəsalmaları bunu spesifikasiya yazılışında tapdı.
+    /// Identity cədvəlləri qəsdən kənarda saxlanılır — onların açarını EF özü doldurur.
+    /// </summary>
+    private static void DeclareClientAssignedKeys(ModelBuilder modelBuilder)
+    {
+        var domainAssembly = typeof(Product).Assembly;
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (entityType.ClrType.Assembly != domainAssembly)
+                continue;
+            if (entityType.FindPrimaryKey()?.Properties is not [{ ClrType: var clrType } key])
+                continue;
+            if (clrType != typeof(Guid))
+                continue;
+
+            key.ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+        }
     }
 
     /// <summary>

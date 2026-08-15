@@ -43,8 +43,26 @@ dotnet test                # unit + inteqrasiya
 cd tests/e2e && npm test   # Playwright (işləyən tətbiq tələb edir — bax ops/README.md)
 ```
 
-İnteqrasiya testləri Testcontainers ilə real Postgres qaldırır — lokalda Docker yoxdursa sakit
-keçilir (CI-da həmişə işləyir). Lokal Docker varsa `DOCKER_AVAILABLE=true` qoy.
+İnteqrasiya testləri real Postgres tələb edir və bazanı iki yolla tapır:
+
+| Rejim | Nə vaxt | Necə |
+|---|---|---|
+| `TEST_PG` | Docker yoxdursa (tövsiyə olunan lokal yol) | Mövcud Postgres serverinə bağlanır, hər test sinfi üçün ayrı baza yaradıb sonra silir |
+| Testcontainers | CI, ya da `DOCKER_AVAILABLE=true` | `postgres:18-alpine` konteyneri qaldırır |
+
+Heç biri yoxdursa testlər sakit keçilir — **bu təhlükəlidir**: ilk CI işəsalması məhz belə
+gizlənmiş altı qüsur tapdı. Docker olmayan maşında mütləq `TEST_PG` işlət:
+
+```bash
+# Postgres xidmət kimi işləmirsə, ayrıca klaster qaldırmaq kifayətdir:
+initdb -D /tmp/qrpg/data -U postgres --pwfile=<parol-faylı>
+pg_ctl -D /tmp/qrpg/data -o "-p 55432" -l /tmp/qrpg/pg.log start
+
+TEST_PG="Host=localhost;Port=55432;Username=postgres;Password=...;Database=postgres" dotnet test
+```
+
+İnteqrasiya testləri **ardıcıl** işləyir (`DisableTestParallelization`): hər sinif öz host-unu
+qaldırır və paralel halda `WebApplicationFactory` entry-point tapıcısı toqquşur.
 
 ## Server, backup, env siyahısı
 

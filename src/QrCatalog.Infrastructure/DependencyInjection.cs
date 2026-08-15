@@ -32,6 +32,11 @@ public static class DependencyInjection
         {
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
 
+            // Yalnız dev/test: EF xətaları entity adı və açar dəyəri ilə gəlir. Prod-da
+            // qapalıdır — həssas data jurnala düşməməlidir.
+            if (sp.GetService<IHostEnvironment>()?.IsDevelopment() == true)
+                options.EnableSensitiveDataLogging().EnableDetailedErrors();
+
             // Output cache qeydiyyatda yoxdursa (məs. dizayn-vaxtı) interceptor passiv qalır
             options.AddInterceptors(
                 new PublicCacheInvalidationInterceptor(

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using QrCatalog.Infrastructure.Identity;
-using Testcontainers.PostgreSql;
 
 namespace QrCatalog.IntegrationTests;
 
@@ -19,24 +18,18 @@ public sealed class CategoryFlowTests : IAsyncLifetime
     private const string AdminPassword = "Passw0rd!23";
     private const string NoCompanyEmail = "kimsesiz@test.az";
 
-    private static bool DockerAvailable =>
-        Environment.GetEnvironmentVariable("CI") == "true" ||
-        Environment.GetEnvironmentVariable("DOCKER_AVAILABLE") == "true";
-
-    private PostgreSqlContainer? _postgres;
+    private TestDatabase? _database;
     private WebApplicationFactory<Program>? _factory;
 
     public async Task InitializeAsync()
     {
-        if (!DockerAvailable)
-            return;
-
-        _postgres = new PostgreSqlBuilder("postgres:18-alpine").Build();
-        await _postgres.StartAsync();
+        _database = await TestDatabase.StartAsync();
+        if (_database is null)
+            return; // nə TEST_PG, nə Docker — test erkən çıxır
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("ConnectionStrings:DefaultConnection", _postgres.GetConnectionString());
+            builder.UseSetting("ConnectionStrings:DefaultConnection", _database.ConnectionString);
             builder.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             builder.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             builder.UseSetting("Bootstrap:CompanyName", "Test müəssisəsi");
@@ -63,7 +56,7 @@ public sealed class CategoryFlowTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (_factory is not null) await _factory.DisposeAsync();
-        if (_postgres is not null) await _postgres.DisposeAsync();
+        if (_database is not null) await _database.DisposeAsync();
     }
 
     private async Task<HttpClient> LoginAsync(string email, string password)

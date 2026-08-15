@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Testcontainers.PostgreSql;
 
 namespace QrCatalog.IntegrationTests;
 
@@ -15,24 +14,18 @@ public sealed class QrFlowTests : IAsyncLifetime
     private const string AdminEmail = "admin@test.az";
     private const string AdminPassword = "Passw0rd!23";
 
-    private static bool DockerAvailable =>
-        Environment.GetEnvironmentVariable("CI") == "true" ||
-        Environment.GetEnvironmentVariable("DOCKER_AVAILABLE") == "true";
-
-    private PostgreSqlContainer? _postgres;
+    private TestDatabase? _database;
     private WebApplicationFactory<Program>? _factory;
 
     public async Task InitializeAsync()
     {
-        if (!DockerAvailable)
-            return;
-
-        _postgres = new PostgreSqlBuilder("postgres:18-alpine").Build();
-        await _postgres.StartAsync();
+        _database = await TestDatabase.StartAsync();
+        if (_database is null)
+            return; // nə TEST_PG, nə Docker — test erkən çıxır
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("ConnectionStrings:DefaultConnection", _postgres.GetConnectionString());
+            builder.UseSetting("ConnectionStrings:DefaultConnection", _database.ConnectionString);
             builder.UseSetting("Bootstrap:AdminEmail", AdminEmail);
             builder.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             builder.UseSetting("Qr:PublicBaseUrl", "https://qr.test.az");
@@ -43,7 +36,7 @@ public sealed class QrFlowTests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (_factory is not null) await _factory.DisposeAsync();
-        if (_postgres is not null) await _postgres.DisposeAsync();
+        if (_database is not null) await _database.DisposeAsync();
     }
 
     private async Task<HttpClient> LoginAsync()
@@ -114,9 +107,11 @@ public sealed class QrFlowTests : IAsyncLifetime
         var anon = _factory.CreateClient();
         var resolved = await anon.GetAsync($"/q/{qr1.Token}");
         Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
+        // Kateqoriya kodu kanonik kataloq ünvanına yönləndirir — skan edən paylaşıla bilən
+        // URL-də qalır, insan oxunan kod isə məhsul səhifəsinin işidir
+        Assert.Equal("/katalog/sezlonqlar", resolved.RequestMessage?.RequestUri?.AbsolutePath);
         var html = await resolved.Content.ReadAsStringAsync();
         Assert.Contains("Şezlonqlar", html);
-        Assert.Contains("SZ-0001", html);
 
         // 5. Tanınmayan token → 404
         var missing = await anon.GetAsync("/q/yoxdur12345");

@@ -89,12 +89,20 @@ public static class StatsEndpoints
             days = Math.Clamp(days, 1, 365);
             var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
 
-            var byDay = await db.ScanEvents
+            // DateTime.Date PostgreSQL-ə tərcümə OLUNMUR (timestamptz) — il/ay/gün ayrı-ayrı
+            // date_part-lara düşür və tarix müştəri tərəfdə yığılır. Qruplaşdırma bazanın
+            // saat qurşağına görə gedir; server UTC-dədir (ops/README) — bütün damğalar da UTC.
+            var byDayRaw = await db.ScanEvents
                 .Where(s => s.OccurredAtUtc >= since)
-                .GroupBy(s => s.OccurredAtUtc.Date)
-                .Select(g => new DayCountDto(g.Key, g.Count()))
-                .OrderBy(d => d.Date)
+                .GroupBy(s => new { s.OccurredAtUtc.Year, s.OccurredAtUtc.Month, s.OccurredAtUtc.Day })
+                .Select(g => new { g.Key.Year, g.Key.Month, g.Key.Day, Count = g.Count() })
                 .ToListAsync();
+
+            var byDay = byDayRaw
+                .Select(d => new DayCountDto(
+                    new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc), d.Count))
+                .OrderBy(d => d.Date)
+                .ToList();
 
             var byCode = await db.ScanEvents
                 .Where(s => s.OccurredAtUtc >= since)
