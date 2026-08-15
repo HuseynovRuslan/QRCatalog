@@ -20,7 +20,7 @@ public static class PublicCatalogQueries
 
     public static async Task<ProductLoad?> LoadProductAsync(
         AppDbContext db, IFileStorage storage, Guid companyId,
-        Guid? id = null, string? slug = null, string? humanCode = null,
+        Guid? id = null, string? slug = null, string? humanCode = null, string? qrToken = null,
         CancellationToken ct = default)
     {
         var query = db.Products.IgnoreQueryFilters().AsNoTracking()
@@ -75,7 +75,8 @@ public static class PublicCatalogQueries
                 .ToList(),
             humanCode,
             company.Phone,
-            company.WhatsappNumber);
+            company.WhatsappNumber,
+            qrToken);
 
         return new ProductLoad(row.Status, row.CategoryId, vm);
     }

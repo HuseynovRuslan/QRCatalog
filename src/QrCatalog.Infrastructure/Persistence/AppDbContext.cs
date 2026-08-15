@@ -23,6 +23,7 @@ public sealed class AppDbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<QrCode> QrCodes => Set<QrCode>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<Inquiry> Inquiries => Set<Inquiry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -139,6 +140,24 @@ public sealed class AppDbContext
             b.Property(i => i.Widths).HasMaxLength(60).IsRequired();
             b.Property(i => i.AltText).HasMaxLength(300);
             b.HasIndex(i => new { i.ProductId, i.SortOrder });
+        });
+
+        modelBuilder.Entity<Inquiry>(b =>
+        {
+            b.Property(i => i.Name).HasMaxLength(200).IsRequired();
+            b.Property(i => i.Phone).HasMaxLength(30).IsRequired();
+            b.Property(i => i.Message).HasMaxLength(4000);
+            b.Property(i => i.InternalNote).HasMaxLength(4000);
+
+            b.HasIndex(i => new { i.CompanyId, i.Status, i.CreatedAtUtc });
+
+            b.HasOne<Company>().WithMany()
+                .HasForeignKey(i => i.CompanyId).OnDelete(DeleteBehavior.Restrict);
+            // Məhsul arxivləşsə də sorğu tarixçəsi qalır
+            b.HasOne<Product>().WithMany()
+                .HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.SetNull);
+            b.HasOne<QrCode>().WithMany()
+                .HasForeignKey(i => i.QrCodeId).OnDelete(DeleteBehavior.SetNull);
         });
 
         ApplyTenantFilters(modelBuilder);

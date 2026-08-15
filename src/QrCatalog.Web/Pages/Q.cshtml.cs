@@ -93,7 +93,8 @@ public sealed class QModel : PageModel
 
             case QrTargetType.Product:
                 var load = await PublicCatalogQueries.LoadProductAsync(
-                    _db, _storage, qrCode.CompanyId, id: qrCode.TargetId, humanCode: qrCode.HumanCode);
+                    _db, _storage, qrCode.CompanyId, id: qrCode.TargetId,
+                    humanCode: qrCode.HumanCode, qrToken: qrCode.Token);
 
                 if (load?.Product is { } product)
                 {

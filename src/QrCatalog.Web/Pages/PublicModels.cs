@@ -27,7 +27,8 @@ public sealed record PublicProductVm(
     IReadOnlyList<PublicImageVm> Images,
     string? HumanCode,
     string? Phone,
-    string? WhatsappNumber)
+    string? WhatsappNumber,
+    string? QrToken = null)
 {
     public string? WhatsappUrl => WhatsappNumber is null
         ? null

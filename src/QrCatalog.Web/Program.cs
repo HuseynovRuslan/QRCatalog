@@ -65,6 +65,14 @@ try
                 PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(1),
             }));
+        // Sorğu forması — spam-a qarşı honeypot-un yanında ikinci sədd
+        options.AddPolicy("inquiry", context => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+            }));
     });
 
     // Health check-lər (postgres daxil) AddInfrastructure-da qeydiyyata alınır
@@ -110,6 +118,7 @@ try
     app.MapProductEndpoints();
     app.MapQrCodeEndpoints();
     app.MapSettingsEndpoints();
+    app.MapInquiryEndpoints();
     app.MapHealthChecks("/health");
 
     // Admin SPA — dərin linklər (/admin/mehsullar və s.) index.html-ə düşür, marşrutu React həll edir
