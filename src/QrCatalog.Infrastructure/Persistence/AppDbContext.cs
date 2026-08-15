@@ -20,6 +20,7 @@ public sealed class AppDbContext
     }
 
     public DbSet<Company> Companies => Set<Company>();
+    public DbSet<Category> Categories => Set<Category>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,28 @@ public sealed class AppDbContext
             b.Property(c => c.Name).HasMaxLength(200).IsRequired();
             b.Property(c => c.Slug).HasMaxLength(60).IsRequired();
             b.HasIndex(c => c.Slug).IsUnique();
+        });
+
+        modelBuilder.Entity<Category>(b =>
+        {
+            b.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            b.Property(c => c.Slug).HasMaxLength(220).IsRequired();
+            b.Property(c => c.Description).HasMaxLength(2000);
+            b.Property(c => c.CodePrefix).HasMaxLength(4);
+
+            // Slug müəssisə daxilində unikaldır — iki müəssisədə eyni slug normaldır
+            b.HasIndex(c => new { c.CompanyId, c.Slug }).IsUnique();
+            b.HasIndex(c => new { c.CompanyId, c.ParentId, c.SortOrder });
+
+            b.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(c => c.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<Category>()
+                .WithMany()
+                .HasForeignKey(c => c.ParentId)
+                .OnDelete(DeleteBehavior.Restrict); // uşağı olan kateqoriya DB səviyyəsində də silinmir
         });
 
         ApplyTenantFilters(modelBuilder);

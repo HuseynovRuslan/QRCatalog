@@ -4,7 +4,7 @@ import { useLogout, useMe } from '../api/auth'
 const nav = [
   { to: '/', label: 'Panel', enabled: true },
   { to: '/mehsullar', label: 'Məhsullar', enabled: false },
-  { to: '/kateqoriyalar', label: 'Kateqoriyalar', enabled: false },
+  { to: '/kateqoriyalar', label: 'Kateqoriyalar', enabled: true },
   { to: '/qr', label: 'QR kodlar', enabled: false },
   { to: '/muracietler', label: 'Müraciətlər', enabled: false },
 ]

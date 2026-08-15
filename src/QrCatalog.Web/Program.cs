@@ -66,6 +66,7 @@ try
     app.MapStaticAssets();
     app.MapRazorPages().WithStaticAssets();
     app.MapAuthEndpoints();
+    app.MapCategoryEndpoints();
     app.MapHealthChecks("/health");
 
     // Admin SPA — dərin linklər (/admin/mehsullar və s.) index.html-ə düşür, marşrutu React həll edir
