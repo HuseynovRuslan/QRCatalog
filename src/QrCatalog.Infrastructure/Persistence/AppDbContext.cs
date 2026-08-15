@@ -24,6 +24,7 @@ public sealed class AppDbContext
     public DbSet<QrCode> QrCodes => Set<QrCode>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
+    public DbSet<ScanEvent> ScanEvents => Set<ScanEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -158,6 +159,18 @@ public sealed class AppDbContext
                 .HasForeignKey(i => i.ProductId).OnDelete(DeleteBehavior.SetNull);
             b.HasOne<QrCode>().WithMany()
                 .HasForeignKey(i => i.QrCodeId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ScanEvent>(b =>
+        {
+            b.Property(s => s.DeviceKind).HasMaxLength(10).IsRequired();
+            b.Property(s => s.Lang).HasMaxLength(10);
+
+            b.HasIndex(s => new { s.CompanyId, s.OccurredAtUtc });
+            b.HasIndex(s => s.QrCodeId);
+
+            b.HasOne<QrCode>().WithMany()
+                .HasForeignKey(s => s.QrCodeId).OnDelete(DeleteBehavior.Cascade);
         });
 
         ApplyTenantFilters(modelBuilder);

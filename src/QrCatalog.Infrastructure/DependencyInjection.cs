@@ -44,6 +44,8 @@ public static class DependencyInjection
         services.AddIdentityAuth();
 
         services.AddSingleton<IEmailSender, Email.SmtpEmailSender>();
+        services.AddSingleton<Scans.ScanEventQueue>();
+        services.AddHostedService<Scans.ScanEventWriter>();
         services.AddSingleton<Qr.QrImageService>();
         services.AddSingleton<Qr.LabelSheetService>();
         services.AddSingleton<Images.ImageProcessor>();

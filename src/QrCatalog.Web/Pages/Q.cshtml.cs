@@ -39,6 +39,9 @@ public sealed class QModel : PageModel
 
     public QState State { get; private set; } = QState.NotFound;
     public string? HumanCode { get; private set; }
+
+    /// <summary>Skan beacon-u üçün — kod tapılanda dolur, tapılmayanda boş qalır.</summary>
+    public string? Token { get; private set; }
     public PublicProductVm? Product { get; private set; }
     public List<PublicProductCardVm> Similar { get; private set; } = [];
 
@@ -70,6 +73,7 @@ public sealed class QModel : PageModel
         }
 
         HumanCode = qrCode.HumanCode;
+        Token = qrCode.Token; // skan qeydi beacon ilə gedir — retired/arxiv halları da sayılır
 
         if (qrCode.Status == QrCodeStatus.Retired)
         {

@@ -4,6 +4,27 @@
     ViewData["Title"] = Model.Title;
 }
 
+@if (Model.Token is not null)
+{
+    <script>
+        // Skan qeydi — səhifə keşdən gəlsə də işləyir; sendBeacon naviqasiyanı gecikdirmir
+        (function () {
+            var payload = JSON.stringify({ token: '@Model.Token' });
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/api/public/scans',
+                    new Blob([payload], { type: 'application/json' }));
+            } else {
+                fetch('/api/public/scans', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload,
+                    keepalive: true
+                });
+            }
+        })();
+    </script>
+}
+
 @if (Model.State == QrCatalog.Web.Pages.QState.Found && Model.Product is not null)
 {
     <partial name="_ProductView" model="Model.Product" />

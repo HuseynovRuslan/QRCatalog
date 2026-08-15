@@ -119,6 +119,7 @@ try
     app.MapQrCodeEndpoints();
     app.MapSettingsEndpoints();
     app.MapInquiryEndpoints();
+    app.MapStatsEndpoints();
     app.MapHealthChecks("/health");
 
     // Admin SPA — dərin linklər (/admin/mehsullar və s.) index.html-ə düşür, marşrutu React həll edir
