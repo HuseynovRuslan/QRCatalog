@@ -1,6 +1,9 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.FileProviders;
+using QrCatalog.Application.Abstractions;
 using QrCatalog.Infrastructure;
+using QrCatalog.Infrastructure.Storage;
 using QrCatalog.Infrastructure.Identity;
 using QrCatalog.Web.Api;
 using QrCatalog.Web.Infrastructure;
@@ -64,6 +67,19 @@ try
     // ona görə UseHttpsRedirection yoxdur.
 
     app.UseSerilogRequestLogging();
+
+    // Lokal storage-da yüklənən şəkillər /uploads altından verilir.
+    // MapStaticAssets bunun üçün İŞLƏMİR — o, build-vaxtı manifestlə işləyir,
+    // runtime-da yaranan fayllardan xəbərsizdir.
+    if (app.Services.GetRequiredService<IFileStorage>() is LocalDiskStorage localStorage)
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(localStorage.Root),
+            RequestPath = "/uploads",
+        });
+    }
+
     app.UseRouting();
     app.UseRateLimiter();
     app.UseAuthentication();
@@ -75,6 +91,7 @@ try
     app.MapRazorPages().WithStaticAssets();
     app.MapAuthEndpoints();
     app.MapCategoryEndpoints();
+    app.MapProductEndpoints();
     app.MapQrCodeEndpoints();
     app.MapHealthChecks("/health");
 

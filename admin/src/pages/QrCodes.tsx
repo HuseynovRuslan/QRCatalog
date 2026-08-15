@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useCategories } from '../api/categories'
+import { useProducts } from '../api/products'
 import {
   useActivateQrCode,
   useCreateQrCode,
@@ -9,10 +10,13 @@ import {
   type QrCode,
 } from '../api/qrcodes'
 
+type TargetKind = 'product' | 'category' | 'archive'
+
 function CreateDialog({ onClose }: { onClose: () => void }) {
   const categories = useCategories()
+  const products = useProducts('', '', '', 1)
   const create = useCreateQrCode()
-  const [targetType, setTargetType] = useState<'category' | 'archive'>('category')
+  const [targetType, setTargetType] = useState<TargetKind>('product')
   const [targetId, setTargetId] = useState('')
 
   return (
@@ -36,13 +40,37 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
           <span className="text-sm font-medium text-stone-700">Hədəf növü</span>
           <select
             value={targetType}
-            onChange={e => setTargetType(e.target.value as 'category' | 'archive')}
+            onChange={e => {
+              setTargetType(e.target.value as TargetKind)
+              setTargetId('')
+            }}
             className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm"
           >
+            <option value="product">Məhsul</option>
             <option value="category">Kateqoriya</option>
             <option value="archive">Arxiv səhifəsi</option>
           </select>
         </label>
+
+        {targetType === 'product' && (
+          <label className="mt-3 block">
+            <span className="text-sm font-medium text-stone-700">Məhsul</span>
+            <select
+              required
+              value={targetId}
+              onChange={e => setTargetId(e.target.value)}
+              className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm"
+            >
+              <option value="">— seçin —</option>
+              {products.data?.items.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.sku ? ` · ${p.sku}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {targetType === 'category' && (
           <label className="mt-3 block">

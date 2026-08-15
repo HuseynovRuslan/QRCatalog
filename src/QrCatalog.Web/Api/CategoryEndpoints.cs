@@ -160,7 +160,9 @@ public static class CategoryEndpoints
                 return Results.Problem(statusCode: StatusCodes.Status409Conflict,
                     title: "Alt-kateqoriyası olan kateqoriya silinə bilməz — əvvəl onları köçürün.");
 
-            // M3: məhsulu olan kateqoriyanın silinməsi də burada qorunacaq
+            if (await db.Products.AnyAsync(p => p.CategoryId == id))
+                return Results.Problem(statusCode: StatusCodes.Status409Conflict,
+                    title: "Məhsulu olan kateqoriya silinə bilməz — əvvəl məhsulları başqa kateqoriyaya köçürün.");
 
             db.Categories.Remove(category);
             await db.SaveChangesAsync();

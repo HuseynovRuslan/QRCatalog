@@ -36,15 +36,8 @@ public static class QrCodeEndpoints
                     q.Status.ToString(), q.CreatedAtUtc))
                 .ToListAsync();
 
-            // Hədəf adlarını ayrıca yığ — hələlik yalnız kateqoriya hədəfi mümkündür
-            var categoryIds = codes
-                .Where(c => c.TargetType == nameof(QrTargetType.Category) && c.TargetId != null)
-                .Select(c => c.TargetId!.Value)
-                .Distinct()
-                .ToList();
-            var names = await db.Categories.AsNoTracking()
-                .Where(c => categoryIds.Contains(c.Id))
-                .ToDictionaryAsync(c => c.Id, c => c.Name);
+            var names = await TargetNamesAsync(db,
+                codes.Select(c => (c.TargetType, c.TargetId)));
 
             var items = codes
                 .Select(c => c with
@@ -67,9 +60,6 @@ public static class QrCodeEndpoints
             if (!Enum.TryParse<QrTargetType>(request.TargetType, ignoreCase: true, out var targetType))
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
                     title: "Hədəf növü tanınmadı.");
-            if (targetType == QrTargetType.Product)
-                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
-                    title: "Məhsul hədəfi M3-dən sonra mümkün olacaq."); // M3: bu məhdudiyyət götürüləcək
 
             string prefix = FallbackPrefix;
             string targetName = "Arxiv";
@@ -82,6 +72,29 @@ public static class QrCodeEndpoints
                         title: "Hədəf kateqoriya tapılmadı.");
                 prefix = category.CodePrefix ?? FallbackPrefix;
                 targetName = category.Name;
+            }
+            else if (targetType == QrTargetType.Product)
+            {
+                var product = await db.Products.AsNoTracking()
+                    .Where(p => p.Id == request.TargetId)
+                    .Select(p => new
+                    {
+                        Name = p.Translations
+                            .Where(t => t.Lang == "az").Select(t => t.Name).FirstOrDefault(),
+                        p.CategoryId,
+                    })
+                    .FirstOrDefaultAsync();
+                if (product is null)
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                        title: "Hədəf məhsul tapılmadı.");
+
+                // Prefiks məhsulun kateqoriyasından gəlir — SZ-0142-dəki "SZ"
+                var codePrefix = await db.Categories.AsNoTracking()
+                    .Where(c => c.Id == product.CategoryId)
+                    .Select(c => c.CodePrefix)
+                    .FirstOrDefaultAsync();
+                prefix = codePrefix ?? FallbackPrefix;
+                targetName = product.Name ?? "(adsız)";
             }
 
             // Nömrə yarışı: unikal indeks + təkrar cəhd. Admin kod yaratması nadir əməliyyatdır,
@@ -123,15 +136,19 @@ public static class QrCodeEndpoints
             if (!Enum.TryParse<QrTargetType>(request.TargetType, ignoreCase: true, out var targetType))
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
                     title: "Hədəf növü tanınmadı.");
-            if (targetType == QrTargetType.Product)
-                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
-                    title: "Məhsul hədəfi M3-dən sonra mümkün olacaq.");
 
             if (targetType == QrTargetType.Category &&
                 !await db.Categories.AnyAsync(c => c.Id == request.TargetId))
             {
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
                     title: "Hədəf kateqoriya tapılmadı.");
+            }
+
+            if (targetType == QrTargetType.Product &&
+                !await db.Products.AnyAsync(p => p.Id == request.TargetId))
+            {
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: "Hədəf məhsul tapılmadı.");
             }
 
             try
@@ -209,14 +226,8 @@ public static class QrCodeEndpoints
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
                     title: "Çap üçün kod seçilməyib.");
 
-            var categoryIds = codes
-                .Where(q => q.TargetType == QrTargetType.Category && q.TargetId != null)
-                .Select(q => q.TargetId!.Value)
-                .Distinct()
-                .ToList();
-            var names = await db.Categories.AsNoTracking()
-                .Where(c => categoryIds.Contains(c.Id))
-                .ToDictionaryAsync(c => c.Id, c => c.Name);
+            var names = await TargetNamesAsync(db,
+                codes.Select(q => (q.TargetType.ToString(), q.TargetId)));
 
             var items = codes
                 .Select(q => new LabelItem(
@@ -230,6 +241,48 @@ public static class QrCodeEndpoints
         })
         .RequireAuthorization(Policies.CanView)
         .RequireAntiforgery();
+    }
+
+    /// <summary>Kateqoriya və məhsul hədəflərinin adlarını bir sorğu dəsti ilə yığır.</summary>
+    private static async Task<Dictionary<Guid, string>> TargetNamesAsync(
+        AppDbContext db, IEnumerable<(string TargetType, Guid? TargetId)> targets)
+    {
+        var byType = targets
+            .Where(t => t.TargetId is not null)
+            .ToLookup(t => t.TargetType, t => t.TargetId!.Value);
+
+        var names = new Dictionary<Guid, string>();
+
+        var categoryIds = byType[nameof(QrTargetType.Category)].Distinct().ToList();
+        if (categoryIds.Count > 0)
+        {
+            foreach (var (id, name) in await db.Categories.AsNoTracking()
+                .Where(c => categoryIds.Contains(c.Id))
+                .Select(c => new { c.Id, c.Name })
+                .ToDictionaryAsync(c => c.Id, c => c.Name))
+            {
+                names[id] = name;
+            }
+        }
+
+        var productIds = byType[nameof(QrTargetType.Product)].Distinct().ToList();
+        if (productIds.Count > 0)
+        {
+            foreach (var (id, name) in await db.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.Id))
+                .Select(p => new
+                {
+                    p.Id,
+                    Name = p.Translations
+                        .Where(t => t.Lang == "az").Select(t => t.Name).FirstOrDefault() ?? "(adsız)",
+                })
+                .ToDictionaryAsync(p => p.Id, p => p.Name))
+            {
+                names[id] = name;
+            }
+        }
+
+        return names;
     }
 
     /// <summary>

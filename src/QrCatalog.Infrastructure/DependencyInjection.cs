@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using QrCatalog.Application.Abstractions;
 using QrCatalog.Infrastructure.Identity;
@@ -38,6 +39,14 @@ public static class DependencyInjection
 
         services.AddSingleton<Qr.QrImageService>();
         services.AddSingleton<Qr.LabelSheetService>();
+        services.AddSingleton<Images.ImageProcessor>();
+
+        // Storage:Provider = "S3" (R2) | "Local" (default — dev)
+        services.AddSingleton<IFileStorage>(sp =>
+            configuration["Storage:Provider"]?.Equals("S3", StringComparison.OrdinalIgnoreCase) == true
+                ? new Storage.S3Storage(configuration)
+                : new Storage.LocalDiskStorage(configuration,
+                    sp.GetRequiredService<IHostEnvironment>().ContentRootPath));
 
         return services;
     }

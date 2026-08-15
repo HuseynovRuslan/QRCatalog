@@ -92,8 +92,34 @@ public sealed class QModel : PageModel
                 return Page();
 
             case QrTargetType.Product:
+                var product = await _db.Products
+                    .IgnoreQueryFilters() // eyni istisna — bax: sinif sənədi
+                    .AsNoTracking()
+                    .Where(p => p.Id == qrCode.TargetId && p.CompanyId == qrCode.CompanyId)
+                    .Select(p => new
+                    {
+                        p.Status,
+                        Name = p.Translations
+                            .Where(t => t.Lang == "az").Select(t => t.Name).FirstOrDefault(),
+                        Description = p.Translations
+                            .Where(t => t.Lang == "az").Select(t => t.Description).FirstOrDefault(),
+                    })
+                    .FirstOrDefaultAsync();
+
+                // Draft qonaq üçün hələ mövcud deyil, silinmiş/arxiv "istehsal olunmur" —
+                // çap olunmuş etiket heç vaxt 404 görməməlidir
+                if (product is null || product.Status != ProductStatus.Published)
+                {
+                    State = QState.Archived;
+                    return Page();
+                }
+
+                State = QState.Found;
+                TargetName = product.Name;
+                TargetDescription = product.Description;
+                return Page();
+
             default:
-                // M3-dən sonra məhsul səhifəsi bura gələcək
                 State = QState.Archived;
                 return Page();
         }

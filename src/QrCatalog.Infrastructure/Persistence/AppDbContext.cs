@@ -22,6 +22,7 @@ public sealed class AppDbContext
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<QrCode> QrCodes => Set<QrCode>();
+    public DbSet<Product> Products => Set<Product>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -83,6 +84,61 @@ public sealed class AppDbContext
                 .WithMany()
                 .HasForeignKey(q => q.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Product>(b =>
+        {
+            b.Property(p => p.Slug).HasMaxLength(220).IsRequired();
+            b.Property(p => p.Sku).HasMaxLength(60);
+
+            b.HasIndex(p => new { p.CompanyId, p.Slug }).IsUnique();
+            b.HasIndex(p => new { p.CompanyId, p.CategoryId, p.Status });
+
+            b.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(p => p.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Məhsulu olan kateqoriya silinməsin — endpoint 409 + DB Restrict
+            b.HasOne<Category>()
+                .WithMany()
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasMany(p => p.Translations)
+                .WithOne()
+                .HasForeignKey(t => t.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasMany(p => p.Specs)
+                .WithOne()
+                .HasForeignKey(s => s.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasMany(p => p.Images)
+                .WithOne()
+                .HasForeignKey(i => i.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductTranslation>(b =>
+        {
+            b.Property(t => t.Lang).HasMaxLength(2).IsRequired();
+            b.Property(t => t.Name).HasMaxLength(300).IsRequired();
+            b.HasIndex(t => new { t.ProductId, t.Lang }).IsUnique();
+        });
+
+        modelBuilder.Entity<ProductSpec>(b =>
+        {
+            b.Property(s => s.Label).HasMaxLength(100).IsRequired();
+            b.Property(s => s.Value).HasMaxLength(500).IsRequired();
+            b.HasIndex(s => new { s.ProductId, s.SortOrder });
+        });
+
+        modelBuilder.Entity<ProductImage>(b =>
+        {
+            b.Property(i => i.StoragePrefix).HasMaxLength(300).IsRequired();
+            b.Property(i => i.Widths).HasMaxLength(60).IsRequired();
+            b.Property(i => i.AltText).HasMaxLength(300);
+            b.HasIndex(i => new { i.ProductId, i.SortOrder });
         });
 
         ApplyTenantFilters(modelBuilder);

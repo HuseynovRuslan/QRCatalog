@@ -3,7 +3,7 @@ import { useLogout, useMe } from '../api/auth'
 
 const nav = [
   { to: '/', label: 'Panel', enabled: true },
-  { to: '/mehsullar', label: 'Məhsullar', enabled: false },
+  { to: '/mehsullar', label: 'Məhsullar', enabled: true },
   { to: '/kateqoriyalar', label: 'Kateqoriyalar', enabled: true },
   { to: '/qr', label: 'QR kodlar', enabled: true },
   { to: '/muracietler', label: 'Müraciətlər', enabled: false },
