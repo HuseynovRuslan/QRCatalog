@@ -27,6 +27,9 @@ try
         .WriteTo.Console());
 
     builder.Services.AddRazorPages();
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<QrCatalog.Application.Abstractions.ICurrentUser,
+        QrCatalog.Web.Infrastructure.CurrentUserAccessor>();
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddAppAuthorization();
     builder.Services.AddOpenApi();
@@ -88,6 +91,7 @@ try
     // TLS produksiyada Caddy-də bitir — konteynerlər öz aralarında düz HTTP danışır,
     // ona görə UseHttpsRedirection yoxdur.
 
+    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseResponseCompression();
     app.UseSerilogRequestLogging();
 
@@ -120,6 +124,7 @@ try
     app.MapSettingsEndpoints();
     app.MapInquiryEndpoints();
     app.MapStatsEndpoints();
+    app.MapAuditEndpoints();
     app.MapHealthChecks("/health");
 
     // Admin SPA — dərin linklər (/admin/mehsullar və s.) index.html-ə düşür, marşrutu React həll edir

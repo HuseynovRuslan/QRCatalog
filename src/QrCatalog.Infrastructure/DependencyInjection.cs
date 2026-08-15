@@ -33,8 +33,12 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
 
             // Output cache qeydiyyatda yoxdursa (məs. dizayn-vaxtı) interceptor passiv qalır
-            options.AddInterceptors(new PublicCacheInvalidationInterceptor(
-                sp.GetService<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>()));
+            options.AddInterceptors(
+                new PublicCacheInvalidationInterceptor(
+                    sp.GetService<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>()),
+                new AuditInterceptor(
+                    sp.GetService<ICurrentUser>(),
+                    sp.GetService<ITenantContext>()));
         });
 
         // Health check bağlantı sətri ilə birlikdə burada qeydiyyata alınır ki,

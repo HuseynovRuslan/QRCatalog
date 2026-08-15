@@ -6,10 +6,12 @@
     <title>@ViewData["Title"] — QrCatalog</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
+<body class="min-h-screen bg-stone-50 text-stone-900 antialiased"
+      data-qr-token="@(ViewData["QrToken"] as string)">
     <main>
         @RenderBody()
     </main>
+    <script src="~/js/public.js" asp-append-version="true" defer></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

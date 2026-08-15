@@ -39,13 +39,26 @@ cd src/QrCatalog.Web && npm install && npm run build:css
 ## Test
 
 ```bash
-dotnet test
+dotnet test                # unit + inteqrasiya
+cd tests/e2e && npm test   # Playwright (işləyən tətbiq tələb edir — bax ops/README.md)
 ```
 
 İnteqrasiya testləri Testcontainers ilə real Postgres qaldırır — lokalda Docker yoxdursa sakit
 keçilir (CI-da həmişə işləyir). Lokal Docker varsa `DOCKER_AVAILABLE=true` qoy.
 
-## Server
+## Server, backup, env siyahısı
 
-`docker compose up` — web + postgres. `POSTGRES_PASSWORD` `.env` faylında verilməlidir.
-TLS-i Caddy bitirir (M8-də əlavə olunacaq); konteynerlər öz aralarında düz HTTP danışır.
+Bax: [ops/README.md](ops/README.md). Qısa: `docker compose up` (web + postgres),
+TLS-i Caddy bitirir, backup `ops/backup.sh` (pg_dump → R2) + `ops/restore-test.sh`
+(sınanmamış backup backup deyil). **Etiket çapından əvvəl `Qr__PublicBaseUrl`
+(S2-01 domen qərarı) mütləq təyin olunmalıdır** — QR-ın içinə düşən ünvan budur.
+
+## Təhlükəsizlik xülasəsi
+
+- Cookie auth (HttpOnly, SameSite=Strict) + antiforgery X-XSRF-TOKEN; API-də redirect yox 401/403
+- Multi-tenant fail-closed query filtri; IgnoreQueryFilters yalnız sənədləşdirilmiş public yollarda
+- CSP `script-src 'self'` (inline skript yoxdur), nosniff, frame-ancestors 'none'
+- Login rate limit + lockout; public formalar honeypot + IP limit
+- Şəkil yükləmə: magic-byte yoxlanışı, EXIF/GPS metadata atılır
+- Audit jurnalı: kim, nə vaxt, nəyi, hansı dəyərdən (interceptor — endpoint unutması mümkün deyil)
+- Public cavab strukturlarında daxili sahələr mövcud deyil

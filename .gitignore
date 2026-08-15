@@ -487,3 +487,10 @@ node_modules/
 # Generasiya olunan aktivlər
 src/QrCatalog.Web/wwwroot/admin/
 src/QrCatalog.Web/wwwroot/css/site.css
+
+# Playwright
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+
+# Yuklenen fayllar (lokal storage)
+src/QrCatalog.Web/uploads/

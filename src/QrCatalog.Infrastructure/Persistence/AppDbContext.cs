@@ -25,6 +25,7 @@ public sealed class AppDbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<ScanEvent> ScanEvents => Set<ScanEvent>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,6 +172,17 @@ public sealed class AppDbContext
 
             b.HasOne<QrCode>().WithMany()
                 .HasForeignKey(s => s.QrCodeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AuditEntry>(b =>
+        {
+            b.Property(a => a.UserEmail).HasMaxLength(320).IsRequired();
+            b.Property(a => a.EntityType).HasMaxLength(60).IsRequired();
+            b.Property(a => a.EntityId).HasMaxLength(60).IsRequired();
+            b.Property(a => a.Action).HasMaxLength(10).IsRequired();
+            b.Property(a => a.Changes).HasMaxLength(8000);
+
+            b.HasIndex(a => new { a.CompanyId, a.OccurredAtUtc });
         });
 
         ApplyTenantFilters(modelBuilder);

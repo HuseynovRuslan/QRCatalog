@@ -40,3 +40,68 @@ jobs:
         run: |
           npm ci
           npm run build:css
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build-test
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: qrcatalog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build frontend assets
+        run: |
+          cd admin && npm ci && npm run build && cd ..
+          cd src/QrCatalog.Web && npm ci && npm run build:css
+
+      - name: Start app
+        env:
+          ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=qrcatalog;Username=postgres;Password=postgres
+          Bootstrap__AdminEmail: admin@local.az
+          Bootstrap__AdminPassword: Passw0rd!
+          Bootstrap__CompanyName: E2E Test
+          Bootstrap__CompanySlug: e2e
+          ASPNETCORE_ENVIRONMENT: Development
+          ASPNETCORE_URLS: http://localhost:5079
+        run: |
+          dotnet run --project src/QrCatalog.Web -c Release &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:5079/health > /dev/null; then echo hazir; break; fi
+            sleep 2
+          done
+          curl -sf http://localhost:5079/health
+
+      - name: Run Playwright
+        working-directory: tests/e2e
+        env:
+          BASE_URL: http://localhost:5079
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: tests/e2e/test-results/
