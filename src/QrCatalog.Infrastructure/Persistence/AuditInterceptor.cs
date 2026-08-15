@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -16,6 +17,12 @@ namespace QrCatalog.Infrastructure.Persistence;
 public sealed class AuditInterceptor : SaveChangesInterceptor
 {
     private const int MaxValueLength = 500;
+
+    // AZ hərfləri \u-escape olunmasın — jurnalı insan oxuyur
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
 
     private static readonly Type[] AuditedTypes =
     [
@@ -75,7 +82,7 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
                 var diff = ChangedProperties(entry);
                 if (diff.Count == 0)
                     continue; // real dəyişiklik yoxdur
-                changes = JsonSerializer.Serialize(diff);
+                changes = JsonSerializer.Serialize(diff, JsonOptions);
             }
 
             var id = entry.Properties

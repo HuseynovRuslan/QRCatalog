@@ -203,14 +203,17 @@ public sealed class AppDbContext
             var parameter = Expression.Parameter(entityType.ClrType, "e");
             var companyId = Expression.Property(parameter, nameof(ITenantOwned.CompanyId));
 
-            // e => _tenant.CompanyId != null && e.CompanyId == _tenant.CompanyId.Value
+            // e => _tenant.CompanyId != null && (Guid?)e.CompanyId == _tenant.CompanyId
+            // DİQQƏT: sağ tərəf Guid?-dır, Convert(Guid?→Guid) İŞLƏDİLMİR — EF parametri
+            // SQL AND-dən asılı olmayaraq client-də hesablayır və null halında
+            // "Nullable object must have a value" ilə partlayırdı (ilk CI run tapdı).
             var tenantAccess = Expression.Property(
                 Expression.Field(Expression.Constant(this), "_tenant"),
                 nameof(ITenantContext.CompanyId));
 
             var body = Expression.AndAlso(
                 Expression.NotEqual(tenantAccess, Expression.Constant(null, typeof(Guid?))),
-                Expression.Equal(companyId, Expression.Convert(tenantAccess, typeof(Guid))));
+                Expression.Equal(Expression.Convert(companyId, typeof(Guid?)), tenantAccess));
 
             modelBuilder.Entity(entityType.ClrType)
                 .HasQueryFilter(Expression.Lambda(body, parameter));

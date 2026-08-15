@@ -27,6 +27,14 @@ try
         .WriteTo.Console());
 
     builder.Services.AddRazorPages();
+
+    // Default HtmlEncoder yalnız BasicLatin-i açıq buraxır — Razor @-çıxışında
+    // AZ hərfləri (ş, ə, ı...) HTML entity-lərinə çevrilirdi, testlər və HTML həcmi əziyyət
+    // çəkirdi. Bütün diapazonları aç; <, >, &, " yenə də encode olunur — XSS qorunması dəyişmir.
+    builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
+        options.TextEncoderSettings =
+            new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
+
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<QrCatalog.Application.Abstractions.ICurrentUser,
         QrCatalog.Web.Infrastructure.CurrentUserAccessor>();

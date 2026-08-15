@@ -113,7 +113,8 @@ public sealed class ProductFlowTests : IAsyncLifetime
             $"/api/admin/products/{product.Id}/specs",
             new { specs = new[] { new { label = "Ölçü", value = "190×60 sm" },
                                   new { label = "Material", value = "Plastik" } } });
-        Assert.Equal(HttpStatusCode.NoContent, specsRes.StatusCode);
+        Assert.True(specsRes.StatusCode == HttpStatusCode.NoContent,
+            $"Specs: {(int)specsRes.StatusCode} — {await specsRes.Content.ReadAsStringAsync()}");
 
         // Şəkil yükləmə — multipart + XSRF başlığı
         var xsrf = (await admin.GetFromJsonAsync<AntiforgeryResponse>("/api/auth/antiforgery"))!.Token;

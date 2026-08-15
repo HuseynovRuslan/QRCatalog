@@ -95,9 +95,14 @@ public sealed class PublicSiteTests : IAsyncLifetime
             new { name = "Gizli qaralama", categoryId = category.Id }))
             .Content.ReadFromJsonAsync<IdResponse>())!;
 
-        await SendJsonAsync(admin, HttpMethod.Post, $"/api/admin/products/{bahama.Id}/publish");
-        await SendJsonAsync(admin, HttpMethod.Put, $"/api/admin/products/{bahama.Id}/specs",
+        var publishRes = await SendJsonAsync(admin, HttpMethod.Post,
+            $"/api/admin/products/{bahama.Id}/publish");
+        Assert.True(publishRes.StatusCode == HttpStatusCode.NoContent,
+            $"Publish: {(int)publishRes.StatusCode} — {await publishRes.Content.ReadAsStringAsync()}");
+        var specsRes = await SendJsonAsync(admin, HttpMethod.Put, $"/api/admin/products/{bahama.Id}/specs",
             new { specs = new[] { new { label = "Ölçü", value = "190×60 sm" } } });
+        Assert.True(specsRes.StatusCode == HttpStatusCode.NoContent,
+            $"Specs: {(int)specsRes.StatusCode} — {await specsRes.Content.ReadAsStringAsync()}");
 
         // Əlaqə məlumatı
         var settingsRes = await SendJsonAsync(admin, HttpMethod.Put, "/api/admin/settings",

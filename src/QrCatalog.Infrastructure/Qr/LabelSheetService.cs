@@ -60,8 +60,10 @@ public sealed class LabelSheetService
                                         .AlignMiddle()
                                         .Column(col =>
                                         {
+                                            // FontFamily QƏSDƏN verilmir: Consolas Linux serverdə
+                                            // yoxdur və QuestPDF exception atırdı (ilk CI run tapdı)
                                             col.Item().Text(item.HumanCode)
-                                                .FontFamily(Fonts.Consolas).Bold().FontSize(12);
+                                                .Bold().FontSize(12);
                                             col.Item().PaddingTop(1, Unit.Millimetre)
                                                 .Text(item.TargetName).FontSize(8);
                                             col.Item().PaddingTop(2, Unit.Millimetre)

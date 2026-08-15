@@ -93,9 +93,10 @@ public sealed class ScanStatsTests : IAsyncLifetime
             new { targetType = "product", targetId = product.Id })).Content
             .ReadFromJsonAsync<QrCodeResponse>())!;
 
-        // Q səhifəsi beacon skriptini daşıyır
+        // Q səhifəsi beacon üçün tokeni data-atributda daşıyır (skript public.js-dədir)
         var page = await anon.GetStringAsync($"/q/{scanned.Token}");
-        Assert.Contains("/api/public/scans", page);
+        Assert.Contains($"data-qr-token=\"{scanned.Token}\"", page);
+        Assert.Contains("/js/public.js", page);
 
         // 3 skan beacon-u (mobil UA ilə)
         for (var i = 0; i < 3; i++)
