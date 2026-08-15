@@ -1,0 +1,11 @@
+# Host artefaktları image-ə düşməsin: Windows node_modules Linux npm ci-nin üstünə
+# merge olunurdu, bin/obj isə build context-i yüzlərlə MB şişirdirdi.
+**/node_modules
+**/bin
+**/obj
+**/wwwroot/admin
+**/wwwroot/css/site.css
+.git
+.github
+.vs
+*.md

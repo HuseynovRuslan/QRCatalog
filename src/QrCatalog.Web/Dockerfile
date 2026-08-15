@@ -10,6 +10,9 @@ RUN cd admin && npm run build
 COPY src/QrCatalog.Web/package.json src/QrCatalog.Web/package-lock.json src/QrCatalog.Web/
 RUN cd src/QrCatalog.Web && npm ci
 COPY src/QrCatalog.Web/Styles src/QrCatalog.Web/Styles
+# Tailwind v4 class-ları markup-dan avtomatik aşkarlayır — Razor səhifələri
+# kopyalanmasa utility-lər CSS-ə düşmür və sayt stilsiz çıxır
+COPY src/QrCatalog.Web/Pages src/QrCatalog.Web/Pages
 RUN cd src/QrCatalog.Web && npm run build:css
 
 # ── .NET build ────────────────────────────────────────────────────────────────
