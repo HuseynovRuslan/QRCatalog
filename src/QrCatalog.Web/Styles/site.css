@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* Razor Pages (public sayt) üçün mənbə fayl.
+   Build: npm run build:css  →  wwwroot/css/site.css (generasiya olunur, git-ə düşmür). */

@@ -1,0 +1,27 @@
+# Server (staging/produksiya) üçün. Lokal inkişafda Docker lazım deyil:
+# lokal PostgreSQL 18 + `dotnet run` işlədilir — bax README.md.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: src/QrCatalog.Web/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=qrcatalog;Username=postgres;Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env-də verilməlidir}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env-də verilməlidir}
+      - POSTGRES_DB=qrcatalog
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QrCatalog.Application/QrCatalog.Application.csproj" />
+    <Project Path="src/QrCatalog.Domain/QrCatalog.Domain.csproj" />
+    <Project Path="src/QrCatalog.Infrastructure/QrCatalog.Infrastructure.csproj" />
+    <Project Path="src/QrCatalog.Web/QrCatalog.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/QrCatalog.IntegrationTests/QrCatalog.IntegrationTests.csproj" />
+    <Project Path="tests/QrCatalog.UnitTests/QrCatalog.UnitTests.csproj" />
+  </Folder>
+</Solution>
