@@ -27,124 +27,137 @@ import urllib.request
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CATEGORIES = [
-    ("Şezlonqlar", "SZ", "Hovuz, çimərlik və terras üçün uzanacaqlar."),
-    ("Skameykalar", "SK", "Park, bağ və piknik skamyaları."),
-    ("Bağ masaları", "MS", "Yumru, düzbucaqlı və qatlanan masalar."),
-    ("Çətirlər", "CT", "Günəşdən qoruyan bağ və terras çətirləri."),
-    ("Stullar", "ST", "Ştabellənən və toxunuşlu bağ stulları."),
+    ("Şezlonqlar", "SZ", "Hovuz, çimərlik və terras üçün massiv taxta uzanacaqlar."),
+    ("Skameykalar", "SK", "Park, bağ və həyət skamyaları — massiv taxtadan."),
+    ("Masalar", "MS", "Bağ və piknik masaları, qatlanan modellər."),
+    ("Stullar", "ST", "Taxta bağ və terras stulları."),
+    ("Salıncaqlar", "SL", "Bağ salıncaqları və asma oturacaqlar."),
 ]
 
 # (kateqoriya, ad, SKU, təsvir, spesifikasiyalar, hal)
+# HAMISI TAXTADANDIR — istehsal profili budur. Material sətri hər məhsulda ağac növünü
+# və emalını göstərir, çünki açıq havada məhsulun ömrünü məhz bu təyin edir.
 PRODUCTS = [
-    ("Şezlonqlar", "Bahama şezlonq, ağ", "SZ-BH-AG",
-     "Ştabellənən plastik şezlonq. UV stabilizatorlu polipropilen — günəş altında saralmır, "
-     "yağışdan sonra ləkə qalmır. Bir-birinin üstünə yığılır, anbarda az yer tutur.",
-     [("Ölçü", "190×60×32 sm"), ("Material", "Polipropilen (UV stabilizatorlu)"),
-      ("Çəki", "4,2 kq"), ("Maksimum yük", "150 kq"), ("Rəng", "Ağ"), ("Zəmanət", "2 il")],
+    ("Şezlonqlar", "Akasiya şezlonq, klassik", "SZ-AK-KL",
+     "Massiv akasiya taxtasından, 5 pilləli arxalıqla. Təbii yağla işlənib — su damcısı "
+     "içinə keçmir, günəş altında çatlamır. Arxa təkərlər sayəsində bir nəfər onu tək "
+     "yerdəyişdirir.",
+     [("Ölçü", "200×65×35 sm"), ("Material", "Massiv akasiya (yağlanmış)"),
+      ("Çəki", "13 kq"), ("Arxalıq", "5 pilləli"), ("Təkər", "Var, arxa cütlük"),
+      ("Maksimum yük", "150 kq"), ("Zəmanət", "2 il")],
      "published"),
-    ("Şezlonqlar", "Bahama şezlonq, antrasit", "SZ-BH-AN",
-     "Ağ modelin antrasit rəngi. Tünd səth toz və ləkəni daha az göstərir — çox işlənən "
-     "hovuz kənarı üçün münasibdir.",
-     [("Ölçü", "190×60×32 sm"), ("Material", "Polipropilen (UV stabilizatorlu)"),
-      ("Çəki", "4,2 kq"), ("Maksimum yük", "150 kq"), ("Rəng", "Antrasit"), ("Zəmanət", "2 il")],
+    ("Şezlonqlar", "Termo-şam şezlonq", "SZ-TS-AC",
+     "Termik emaldan keçmiş şam: rütubəti udmur, formasını saxlayır, hovuz kənarında da "
+     "uzun ömürlüdür. Açıq bal rəngi vaxt keçdikcə gümüşü tona keçir.",
+     [("Ölçü", "195×62×34 sm"), ("Material", "Termo-şam (ThermoWood)"),
+      ("Çəki", "11 kq"), ("Səth", "Cilalanmış + yağ"), ("Maksimum yük", "140 kq"),
+      ("Zəmanət", "3 il")],
      "published"),
-    ("Şezlonqlar", "Riviera taxta şezlonq", "SZ-RV-TX",
-     "Yağlanmış akasiya taxtasından, 5 pilləli arxalıqla. Arxa təkərlər sayəsində bir nəfər "
-     "tərəfindən yerdəyişdirilir.",
-     [("Ölçü", "200×65×35 sm"), ("Material", "Akasiya taxtası (yağlanmış)"),
-      ("Çəki", "12 kq"), ("Arxalıq", "5 pilləli"), ("Təkər", "Var, arxa cütlük"),
+    ("Şezlonqlar", "Akasiya şezlonq, yastıqlı", "SZ-AK-YS",
+     "Klassik modelin yastıqlı variantı. Yastıq örtüyü açılır və maşında yuyulur — "
+     "hovuz kənarında krem və günəş yağı ləkəsi problem olmur.",
+     [("Ölçü", "200×68×36 sm"), ("Material", "Massiv akasiya + akril yastıq"),
+      ("Yastıq", "Sökülən, yuyula bilən"), ("Çəki", "16 kq"),
+      ("Maksimum yük", "150 kq"), ("Zəmanət", "2 il")],
+     "published"),
+    ("Şezlonqlar", "İkilik şezlonq, kölgəlikli", "SZ-IK-KL",
+     "İki nəfərlik geniş uzanacaq və üstündə taxta karkaslı kölgəlik. Kölgəlik parçası "
+     "sökülür — qışda anbara yalnız karkas qalır.",
+     [("Ölçü", "200×140×175 sm"), ("Material", "Massiv şam (antiseptik)"),
+      ("Kölgəlik", "Parça, sökülən"), ("Çəki", "42 kq"), ("Tutum", "2 nəfər"),
       ("Zəmanət", "2 il")],
      "published"),
-    ("Şezlonqlar", "Playa şezlonq, tekstilen örtüklü", "SZ-PL-TK",
-     "Alüminium karkas və tekstilen örtük — yaş qalmır, kölgədə tez qurur. Karkas "
-     "paslanmır, dəniz kənarı üçün nəzərdə tutulub.",
-     [("Ölçü", "195×62×30 sm"), ("Material", "Alüminium + tekstilen"),
-      ("Çəki", "6,8 kq"), ("Maksimum yük", "120 kq"), ("Rəng", "Bej / qara"),
-      ("Zəmanət", "1 il")],
-     "published"),
-    ("Şezlonqlar", "Lux şezlonq, yastıqlı", "SZ-LX-YS",
-     "Sökülən yastıqlı model. Yastıq örtüyü açılır və maşında yuyulur.",
-     [("Ölçü", "205×70×38 sm"), ("Material", "Alüminium + akril yastıq"),
-      ("Yastıq", "Sökülən, yuyula bilən"), ("Zəmanət", "2 il")],
-     "draft"),
 
     ("Skameykalar", "Park skamyası, 3 nəfərlik", "SK-PR-3N",
-     "Tökmə metal ayaqlar və qalın taxta oturacaq. Yerə bərkidilmək üçün ayaqlarda deşiklər "
-     "var — ictimai məkanlarda tələb olunur.",
-     [("Ölçü", "180×62×82 sm"), ("Material", "Tökmə metal + şam taxtası"),
-      ("Çəki", "38 kq"), ("Tutum", "3 nəfər"), ("Bərkidilmə", "Yerə bolt ilə"),
+     "Qalın massiv şam oturacaq və arxalıq, möhkəm taxta ayaqlar. Ayaqlarda deşiklər var — "
+     "ictimai məkanda yerə bərkidilir.",
+     [("Ölçü", "180×62×85 sm"), ("Material", "Massiv şam (antiseptik + lak)"),
+      ("Çəki", "34 kq"), ("Tutum", "3 nəfər"), ("Bərkidilmə", "Yerə bolt ilə"),
       ("Zəmanət", "3 il")],
      "published"),
     ("Skameykalar", "Bağ skamyası «İpək»", "SK-IP-AK",
-     "Akasiya taxtasından arxalıqlı skamya. Kənarları yumrulanıb — paltar ilişmir.",
-     [("Ölçü", "150×58×85 sm"), ("Material", "Akasiya taxtası"), ("Çəki", "21 kq"),
+     "Akasiyadan arxalıqlı skamya. Bütün kənarlar yumrulanıb — paltar ilişmir, uşaq "
+     "əlini cızmır.",
+     [("Ölçü", "150×58×85 sm"), ("Material", "Massiv akasiya"), ("Çəki", "21 kq"),
       ("Tutum", "2-3 nəfər"), ("Zəmanət", "2 il")],
      "published"),
-    ("Skameykalar", "Piknik dəsti — masa və 2 skamya", "SK-PK-DS",
-     "Masa və skamyalar bir bütövdür, açıq havada dağılmır. Şam taxtası antiseptiklə "
-     "işlənib.",
-     [("Ölçü", "160×150×75 sm"), ("Material", "Şam taxtası (antiseptik)"),
+    ("Skameykalar", "Arxalıqsız skamya, 150 sm", "SK-AR-150",
+     "Sadə skamya — masanın kənarına, çardağa, dəhlizə. Hər iki tərəfdən oturulur, "
+     "lazım olanda masa altına girir.",
+     [("Ölçü", "150×35×45 sm"), ("Material", "Massiv şam (antiseptik)"),
+      ("Çəki", "14 kq"), ("Tutum", "3 nəfər"), ("Zəmanət", "2 il")],
+     "published"),
+    ("Skameykalar", "Sandıqlı skamya", "SK-SD-QT",
+     "Oturacaq qapaq kimi qalxır: yastıq, alət, uşaq oyuncağı içində saxlanılır. Qapaq "
+     "yumşaq mexanizmlə enir — barmaq sıxmır.",
+     [("Ölçü", "120×55×85 sm"), ("Material", "Massiv şam (lak)"), ("Həcm", "190 litr"),
+      ("Çəki", "26 kq"), ("Qapaq", "Yumşaq enən"), ("Zəmanət", "2 il")],
+     "published"),
+
+    ("Masalar", "Piknik dəsti — masa və 2 skamya", "MS-PK-DS",
+     "Masa və skamyalar bir bütövdür — açıq havada dağılmır, küləkdə yerindən tərpənmir. "
+     "Şam taxtası antiseptiklə hopdurulub.",
+     [("Ölçü", "160×150×75 sm"), ("Material", "Massiv şam (antiseptik)"),
       ("Çəki", "44 kq"), ("Tutum", "6 nəfər"), ("Yığılma", "Yığılmır, bütöv"),
       ("Zəmanət", "2 il")],
      "published"),
-
-    ("Bağ masaları", "Yumru bağ masası, Ø80 sm", "MS-YM-80",
-     "Dörd nəfərlik yumru masa. Ortada çətir üçün deşik var, tıxacla gəlir.",
-     [("Diametr", "80 sm"), ("Hündürlük", "72 sm"), ("Material", "Polipropilen"),
-      ("Çətir deşiyi", "Var, Ø38 mm"), ("Çəki", "7,5 kq"), ("Zəmanət", "2 il")],
+    ("Masalar", "Bağ masası, 180×90 sm", "MS-BG-180",
+     "Altı-səkkiz nəfərlik ailə masası. Ayaqları söküləndir — qapıdan keçir, daşınmada "
+     "yer tutmur.",
+     [("Ölçü", "180×90×75 sm"), ("Material", "Massiv şam (yağlanmış)"),
+      ("Çəki", "38 kq"), ("Tutum", "6-8 nəfər"), ("Ayaqlar", "Sökülən"),
+      ("Zəmanət", "2 il")],
      "published"),
-    ("Bağ masaları", "Düzbucaqlı masa, 150×90 sm", "MS-DB-150",
-     "Altı nəfərlik masa. Ayaqları söküləndir — daşınma zamanı yer tutmur.",
-     [("Ölçü", "150×90×74 sm"), ("Material", "Alüminium + HPL üz"),
-      ("Tutum", "6 nəfər"), ("Ayaqlar", "Sökülən"), ("Çəki", "18 kq"), ("Zəmanət", "2 il")],
-     "published"),
-    ("Bağ masaları", "Qatlanan balkon masası", "MS-QT-BL",
-     "Balkon məhəccərinə bağlanan qatlanan masa. Bu model istehsaldan çıxıb — "
-     "əvəzinə Yumru bağ masasına baxın.",
-     [("Ölçü", "60×40 sm"), ("Material", "Şam taxtası"), ("Qatlanma", "Var")],
+    ("Masalar", "Qatlanan bistro masası, Ø70", "MS-QT-70",
+     "Balkon və kiçik terras üçün qatlanan masa. Bu model istehsaldan çıxıb — əvəzinə "
+     "Bağ masasına baxın.",
+     [("Diametr", "70 sm"), ("Hündürlük", "72 sm"), ("Material", "Massiv akasiya"),
+      ("Çəki", "9 kq"), ("Qatlanma", "Var")],
      "archived"),
 
-    ("Çətirlər", "Bağ çətiri, Ø300 sm — əyilən", "CT-BG-300",
-     "Əyilən başlıq günəşin yerini izləməyə imkan verir. Örtük 180 q/m² polyesterdir, "
-     "UV keçirməsi 50+.",
-     [("Diametr", "300 sm"), ("Material", "Alüminium dirək + polyester 180 q/m²"),
-      ("UV qoruma", "UPF 50+"), ("Əyilmə", "Var"), ("Altlıq", "Ayrıca satılır"),
-      ("Zəmanət", "1 il")],
+    ("Stullar", "Qatlanan akasiya stulu", "ST-AK-QT",
+     "Qatlanır və divara söykənir — payızda hamısı bir küncə yığılır. Oturacaq və "
+     "arxalıq bədənə uyğun əyilib.",
+     [("Ölçü", "45×55×88 sm"), ("Material", "Massiv akasiya (yağlanmış)"),
+      ("Çəki", "5,5 kq"), ("Qatlanma", "Var"), ("Maksimum yük", "130 kq"),
+      ("Zəmanət", "2 il")],
      "published"),
-    ("Çətirlər", "Divar çətiri, yarımdairə", "CT-DV-YD",
-     "Divara bərkidilir, yer tutmayan həll. Bağlandığında divara yatır.",
-     [("Ölçü", "270×135 sm"), ("Material", "Polyester 160 q/m²"),
-      ("Quraşdırma", "Divara bərkidilir"), ("Zəmanət", "1 il")],
-     "published"),
+    ("Stullar", "Adirondack stulu", "ST-AD-KL",
+     "Geniş qollu, arxaya yatan klassik bağ stulu. Qolluq stəkan üçün kifayət qədər "
+     "genişdir.",
+     [("Ölçü", "78×85×95 sm"), ("Material", "Massiv şam (rəngli lak)"),
+      ("Çəki", "12 kq"), ("Maksimum yük", "140 kq"), ("Zəmanət", "2 il")],
+     "draft"),
 
-    ("Stullar", "Ştabellənən bağ stulu, ağ", "ST-ST-AG",
-     "Altı ədədi bir-birinin üstünə yığılır. Ayaq altlıqları döşəməni cızmır.",
-     [("Ölçü", "54×55×88 sm"), ("Material", "Polipropilen (UV stabilizatorlu)"),
-      ("Çəki", "2,9 kq"), ("Maksimum yük", "130 kq"), ("Ştabellənmə", "6 ədədə qədər"),
-      ("Zəmanət", "2 il")],
+    ("Salıncaqlar", "Bağ salıncağı, 3 nəfərlik", "SL-BG-3N",
+     "Taxta karkas və parça kölgəlik. Zəncir yerinə taxta asqı — küləkdə cırıldamır, "
+     "əl sıxmır.",
+     [("Ölçü", "200×120×180 sm"), ("Material", "Massiv şam (antiseptik)"),
+      ("Tutum", "3 nəfər"), ("Kölgəlik", "Parça, sökülən"),
+      ("Maksimum yük", "250 kq"), ("Zəmanət", "2 il")],
      "published"),
-    ("Stullar", "Kafe stulu, ratan toxunuşlu", "ST-KF-RT",
-     "Sintetik ratan toxunuş — həqiqi ratandan fərqli olaraq yağışdan sonra deformasiya "
-     "olunmur. Kafe və restoran terrasları üçün.",
-     [("Ölçü", "56×58×85 sm"), ("Material", "Alüminium + sintetik ratan"),
-      ("Çəki", "5,4 kq"), ("Maksimum yük", "140 kq"), ("Rəng", "Kapuçino"),
-      ("Zəmanət", "2 il")],
+    ("Salıncaqlar", "Asma salıncaq, 120 sm", "SL-AS-120",
+     "Ağac budağına, pergolaya, ya terras tavanına asılır. Kəndir və qarmaqlar dəstin "
+     "içindədir.",
+     [("Ölçü", "120×60 sm"), ("Material", "Massiv akasiya (yağlanmış)"),
+      ("Çəki", "12 kq"), ("Asma", "Kəndir + qarmaq dəstdə"),
+      ("Maksimum yük", "200 kq"), ("Zəmanət", "2 il")],
      "published"),
 ]
 
 INQUIRIES = [
     ("Elçin Məmmədov", "+994 50 318 22 47",
-     "Salam, 40 ədəd ağ şezlonq lazımdır. Hovuz üçün. Qiymət və çatdırılma müddəti?",
-     "SZ-BH-AG", "InProgress"),
+     "Salam, 40 ədəd akasiya şezlonq lazımdır. Hovuz üçün. Qiymət və çatdırılma müddəti?",
+     "SZ-AK-KL", "InProgress"),
     ("Nurlan Əliyev", "+994 55 604 71 09",
      "Park skamyası 12 ədəd. Yerə bərkidilmə xidmətini də edirsinizmi?",
      "SK-PR-3N", "Answered"),
     ("Gülnar Həsənova", "+994 70 227 45 63",
-     "Kafe terrası üçün 24 stul və 6 masa. Rəng seçimi var?",
-     "ST-KF-RT", None),
+     "Kafe terrası üçün 24 qatlanan stul və 6 masa. Rəng seçimi var?",
+     "ST-AK-QT", None),
     ("Rəşad Quliyev", "+994 51 883 90 12",
-     "Bağ çətiri altlığı ilə birlikdə nə qədərdir?",
-     "CT-BG-300", None),
+     "Bağ salıncağı kölgəliklə birlikdə nə qədərdir? Həyətə almaq istəyirik.",
+     "SL-BG-3N", None),
 ]
 
 
@@ -325,7 +338,7 @@ def seed(client):
                    row_number() OVER (ORDER BY
                        CASE left(q."HumanCode", 2)
                            WHEN 'SZ' THEN 1 WHEN 'SK' THEN 2 WHEN 'MS' THEN 3
-                           WHEN 'CT' THEN 4 ELSE 5 END,
+                           WHEN 'SL' THEN 4 ELSE 5 END,
                        q."HumanCode") AS rn
             FROM "QrCodes" q
         ), counts AS (
