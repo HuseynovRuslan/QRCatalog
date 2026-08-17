@@ -48,7 +48,7 @@ export default function Shell() {
 
   useEffect(() => setMenuOpen(false), [location.pathname])
 
-  const currentTitle = location.pathname.startsWith('/mehsullar/') ? 'Məhsul redaktoru' : pageTitles[location.pathname] ?? 'QrCatalog'
+  const currentTitle = location.pathname.startsWith('/mehsullar/') ? 'Məhsul redaktoru' : pageTitles[location.pathname] ?? 'WOODMARK'
   const displayName = me.data?.displayName || me.data?.email?.split('@')[0] || 'Admin'
   const initial = displayName.trim().charAt(0).toUpperCase()
 
@@ -56,7 +56,12 @@ export default function Shell() {
     <div className="admin-shell">
       {menuOpen && <button className="sidebar-scrim" aria-label="Menyunu bağla" onClick={() => setMenuOpen(false)} />}
       <aside className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <div className="admin-brand"><span className="admin-brand-mark">Q</span><span><strong>QrCatalog</strong><small>FURNITURE SYSTEM</small></span></div>
+        <div className="admin-brand">
+          {/* Krem variant: sidebar tünddür. Şəkil Web tətbiqinin wwwroot-undan gəlir —
+              admin bundle-ına kopyalamağa ehtiyac yoxdur, eyni origin-dədir. */}
+          <img className="admin-brand-logo" src="/img/woodmark-cream.png" alt="" width={40} height={40} />
+          <span><strong>WOODMARK</strong><small>İDARƏETMƏ PANELİ</small></span>
+        </div>
         <div className="sidebar-status"><span className="status-pulse" /><span>Sistem aktivdir</span><small>canlı</small></div>
         <nav className="admin-nav" aria-label="Əsas naviqasiya">
           {navGroups.map(group => <div className="nav-group" key={group.label}>

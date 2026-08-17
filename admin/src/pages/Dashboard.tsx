@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { useMe } from '../api/auth'
 import { useDashboard, useScanReport } from '../api/stats'
 
 type StatTone = 'forest' | 'honey' | 'sage' | 'clay'
@@ -59,14 +58,26 @@ function DayBars({ days }: { days: { date: string; count: number }[] }) {
 }
 
 export default function Dashboard() {
-  const me = useMe()
   const dashboard = useDashboard()
   const [days, setDays] = useState(30)
   const report = useScanReport(days)
-  const firstName = (me.data?.displayName || me.data?.email?.split('@')[0] || 'Admin').split(' ')[0]
   const publishedPercent = dashboard.data?.productsTotal
     ? Math.round((dashboard.data.productsPublished / dashboard.data.productsTotal) * 100)
     : 0
+
+  /* Başlıq QƏSDƏN salamlama deyil. Əvvəl «Salam, Admin. Hər şey nəzarət altındadır»
+     yazırdı — iş alətində boş iddiadır və çox vaxt YALAN olur: müraciət cavabsız qala,
+     kod skan olunmamış ola bilər. Onun yerinə diqqət tələb edən yeganə fakt yazılır;
+     həqiqətən hər şey qaydasındadırsa, onda bunu deməyə haqq qazanır. */
+  const pendingInquiries = dashboard.data?.newInquiries ?? 0
+  const unscanned = dashboard.data?.unscannedCodes ?? 0
+  const headline = !dashboard.data
+    ? { lead: 'Göstəricilər yüklənir', accent: '' }
+    : pendingInquiries > 0
+      ? { lead: `${pendingInquiries} müraciət`, accent: 'cavab gözləyir.' }
+      : unscanned > 0
+        ? { lead: `${unscanned} QR kod`, accent: 'hələ skan olunmayıb.' }
+        : { lead: 'Cavabsız müraciət yoxdur,', accent: 'bütün kodlar işləyir.' }
   const maxTop = Math.max(...(dashboard.data?.topProducts.map(item => item.count) ?? [1]), 1)
 
   return (
@@ -74,14 +85,22 @@ export default function Dashboard() {
       <section className="dashboard-hero">
         <div className="dashboard-hero-copy">
           <span className="eyebrow">İDARƏETMƏ MƏRKƏZİ</span>
-          <h1 aria-label="Panel">Salam, {firstName}.<br /><em>Hər şey nəzarət altındadır.</em></h1>
+          <h1 aria-label="Panel">
+            {headline.lead}
+            {headline.accent && (
+              <>
+                <br />
+                <em>{headline.accent}</em>
+              </>
+            )}
+          </h1>
           <p>Kataloqun performansı, yeni müraciətlər və sahədəki bütün məhsullar bir baxışda.</p>
           <div className="hero-actions">
             <Link to="/mehsullar/yeni" className="hero-primary">+ Yeni məhsul</Link>
             <Link to="/muracietler" className="hero-secondary">Müraciətlərə bax <span>→</span></Link>
           </div>
         </div>
-        <div className="hero-orbit" aria-hidden="true"><span className="orbit-one" /><span className="orbit-two" /><strong>QC</strong></div>
+        <div className="hero-orbit" aria-hidden="true"><span className="orbit-one" /><span className="orbit-two" /><strong>WM</strong></div>
       </section>
 
       <section className="stats-grid" aria-label="Əsas göstəricilər">

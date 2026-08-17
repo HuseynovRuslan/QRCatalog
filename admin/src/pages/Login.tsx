@@ -18,7 +18,10 @@ export default function Login() {
   return (
     <main className="login-page">
       <section className="login-visual">
-        <div className="login-brand"><span>Q</span><strong>QrCatalog</strong><small>FURNITURE SYSTEM</small></div>
+        <div className="login-brand">
+          <img className="admin-brand-logo" src="/img/woodmark-cream.png" alt="" width={44} height={44} />
+          <strong>WOODMARK</strong><small>İDARƏETMƏ PANELİ</small>
+        </div>
         <div className="login-statement">
           <span className="eyebrow">AĞILLI KATALOQ İDARƏETMƏSİ</span>
           <h1>Məhsuldan<br /><em>müştəriyə,</em><br />bir toxunuşda.</h1>
@@ -26,7 +29,7 @@ export default function Login() {
         </div>
         <div className="login-pill-row"><span><i /> Kataloq</span><span><i /> QR analitika</span><span><i /> Sahə nəzarəti</span></div>
         <div className="login-grain" aria-hidden="true" />
-        <div className="login-rings" aria-hidden="true"><span /><span /><b>QC</b></div>
+        <div className="login-rings" aria-hidden="true"><span /><span /><b>WM</b></div>
       </section>
 
       <section className="login-panel">

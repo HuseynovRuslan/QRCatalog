@@ -115,6 +115,15 @@ svg {
     gap: 12px;
 }
 
+/* Loqo işarəsi: krem fonda qəhvəyi variant. Dairə fon VERİLMİR — işarənin öz
+   forması kifayət qədər tanınandır və dairəyə salınsa "ikonlaşır", brend hissi itir. */
+.brand__logo {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    flex: none;
+}
+
 .brand__mark {
     display: grid;
     width: 46px;
@@ -1840,7 +1849,8 @@ svg {
         min-height: 72px;
     }
 
-    .brand__mark {
+    .brand__mark,
+    .brand__logo {
         width: 40px;
         height: 40px;
     }

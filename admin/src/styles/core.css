@@ -117,6 +117,15 @@ textarea:focus-visible {
   border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 
+/* Loqo şəkli: sidebar tünd olduğu üçün krem variant işlədilir. Ölçü mövcud
+   işarə qutusu ilə eynidir ki, brend bloku sürüşməsin. */
+.admin-brand-logo {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  object-fit: contain;
+}
+
 .admin-brand-mark,
 .login-brand > span,
 .login-mobile-mark {

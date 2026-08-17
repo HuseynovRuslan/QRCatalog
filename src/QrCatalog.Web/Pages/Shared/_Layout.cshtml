@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] — QrCatalog</title>
+    <title>@ViewData["Title"] — WOODMARK</title>
+    <link rel="icon" href="~/favicon.ico" sizes="any" />
     <meta name="theme-color" content="#173f32" />
     <meta name="description" content="Açıq hava məkanları üçün seçilmiş mebel kolleksiyası." />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -14,16 +15,14 @@
 
     <header class="site-header">
         <div class="site-shell site-header__inner">
-            <a class="brand" href="/katalog" aria-label="QrCatalog kataloqu">
-                <span class="brand__mark" aria-hidden="true">
-                    <svg viewBox="0 0 48 48" fill="none">
-                        <path d="M11 31.5C11 20.2 18.6 10.8 36.5 8c-.4 17.2-8.9 27-21.2 27" />
-                        <path d="M12 39c4.6-12.5 11.7-19.8 21-26" />
-                    </svg>
-                </span>
+            <a class="brand" href="/katalog" aria-label="WOODMARK kataloqu">
+                @* Loqo şəkil kimi verilir (150px mənbədən 600px-ə hamarlanıb). Vektor
+                   variant gələndə bunu SVG ilə əvəz etmək daha yaxşıdır: çap və iri
+                   ekranlar üçün raster kifayət etmir. *@
+                <img class="brand__logo" src="~/img/woodmark-brown.png" alt="" width="44" height="44" />
                 <span class="brand__copy">
-                    <strong>QR<span>CATALOG</span></strong>
-                    <small>Outdoor collection</small>
+                    <strong>WOOD<span>MARK</span></strong>
+                    <small>Taxta açıq hava mebeli</small>
                 </span>
             </a>
 
