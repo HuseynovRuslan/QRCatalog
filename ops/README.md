@@ -137,6 +137,41 @@ səhv domenlə çap olunmuş etiketi geri qaytarmaq mümkün deyil, ona görə b
 | `Public__DefaultCompanySlug` (ikinci müəssisə yarandıqdan sonra) | `/katalog` 404 verir | səhifə açılmır |
 | `Storage__Provider=S3` amma açarlar səhv | şəkil yükləmə xəta verir | admin paneldə yükləmə uğursuz |
 
+## Mövcud reverse proxy olan serverdə deploy
+
+62.84.179.39 belədir: 80/443 `attendanceqr-caddy-1` konteynerindədir və bütün `qrlog.az`
+saytlarına xidmət edir. Host-a ayrıca Caddy quraşdırmaq OLMAZ.
+
+1. Override-i işə sal — tətbiq host portu yerinə proxy-nin şəbəkəsinə qoşulur:
+
+   ```bash
+   cd /opt/qrcatalog && ln -sfn docker-compose.shared-caddy.yml docker-compose.override.yml
+   docker compose up -d --build
+   ```
+
+2. Paylaşılan Caddyfile-a blok əlavə et. **Ardıcıllıq vacibdir** — səhv sintaksis bütün
+   saytları dayandıra bilər:
+
+   ```bash
+   cp -a /opt/attendanceqr/Caddyfile /opt/attendanceqr/Caddyfile.bak.$(date -u +%Y%m%d-%H%M%S)
+   # bloku catch-all `https:// {`-dan ƏVVƏL əlavə et:
+   #   katalog.qrlog.az {
+   #       encode zstd gzip
+   #       reverse_proxy qrcatalog-web:8080
+   #   }
+   docker exec attendanceqr-caddy-1 caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
+   docker exec attendanceqr-caddy-1 caddy reload   --adapter caddyfile --config /etc/caddy/Caddyfile
+   ```
+
+   `validate` uğursuz olsa nüsxəni geri qaytar və `reload` ETMƏ. `reload` konteyneri
+   yenidən başlatmır — səhv halda köhnə konfiqurasiya işləməyə davam edir.
+
+   `security_headers` QƏSDƏN import olunmur: tətbiq öz başlıqlarını (CSP daxil) özü qoyur
+   və inteqrasiya testi onları yoxlayır.
+
+   Ticarət: web konteyneri proxy-nin şəbəkəsindədir, yəni oradaki digər konteynerlər onu
+   görür (və əksinə). Alternativ — host portu + gateway IP-yə proxy — daha kövrəkdir.
+
 ## Backup
 
 ```bash
@@ -150,6 +185,10 @@ sudo crontab -e
 0 3 * * * set -a; . /etc/qrcatalog/backup.env; set +a; /opt/qrcatalog/ops/backup.sh >> /var/log/qrcatalog-backup.log 2>&1
 0 4 1 * * set -a; . /etc/qrcatalog/backup.env; set +a; /opt/qrcatalog/ops/restore-test.sh >> /var/log/qrcatalog-backup.log 2>&1
 ```
+
+**R2 açarları hələ yoxdursa** `ops/backup-local.sh` işlədilir: eyni yedəkləri server diskinə
+yazır (7 gün saxlama). Bu ARA HƏLLDİR — backup qoruduğu serverin üstündədir, server itsə
+o da itir. Açarlar gələn kimi `backup.sh`-a keçin.
 
 - `backup.sh` — baza (`pg_dump` konteyner içindən) + **şəkillər** (`uploads` volume, çünki
   `Storage__Provider=Local` olanda şəkillər bazada deyil) → R2, 30 gün saxlanma.
