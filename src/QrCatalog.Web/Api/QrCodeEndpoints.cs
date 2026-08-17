@@ -16,7 +16,8 @@ public static class QrCodeEndpoints
     {
         var group = app.MapGroup("/api/admin/qrcodes");
 
-        group.MapGet("/", async (AppDbContext db, string? search, int page = 1, int pageSize = 50) =>
+        group.MapGet("/", async (AppDbContext db, string? search, Guid? targetId,
+            int page = 1, int pageSize = 50) =>
         {
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 200);
@@ -24,6 +25,10 @@ public static class QrCodeEndpoints
             var query = db.QrCodes.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(q => q.HumanCode.Contains(search.ToUpperInvariant()));
+            // Məhsul səhifəsi öz kodlarını göstərir — "bu modelin etiketi hansıdır"
+            // sualına cavab kodlar siyahısında ad axtarmaqla verilməməlidir
+            if (targetId is { } target)
+                query = query.Where(q => q.TargetId == target);
 
             var total = await query.CountAsync();
             var codes = await query

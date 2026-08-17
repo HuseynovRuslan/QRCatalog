@@ -31,6 +31,15 @@ export function useQrCodes(search: string, page: number) {
   })
 }
 
+/** Bir hədəfin (məhsul/kateqoriya) kodları — məhsul səhifəsindəki QR bölməsi üçün. */
+export function useQrCodesForTarget(targetId: string | undefined) {
+  return useQuery<PagedResult<QrCode>, Error>({
+    queryKey: [...KEY, 'target', targetId],
+    queryFn: () => api<PagedResult<QrCode>>(`/api/admin/qrcodes?targetId=${targetId}&pageSize=50`),
+    enabled: Boolean(targetId),
+  })
+}
+
 function useInvalidating<TArgs>(fn: (args: TArgs) => Promise<unknown>) {
   const queryClient = useQueryClient()
   return useMutation({

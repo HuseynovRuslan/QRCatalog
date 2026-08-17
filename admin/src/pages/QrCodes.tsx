@@ -210,11 +210,19 @@ export default function QrCodes() {
                 </td>
                 <td className="px-3 py-2 font-mono font-medium">{qr.humanCode}</td>
                 <td className="px-3 py-2">
-                  {qr.targetType === 'Archive' ? (
-                    <span className="text-stone-400">Arxiv</span>
-                  ) : (
-                    (qr.targetName ?? <span className="text-stone-400">—</span>)
-                  )}
+                  {/* Növ MÜTLƏQ göstərilir: kod prefiksi hər ikisində eynidir (SZ-0001
+                      məhsul, SZ-0005 kateqoriya ola bilər), ona görə yalnız ad
+                      yazılsa hansının nə olduğu bilinmir — etiket çapında bu səhvə aparır. */}
+                  <span className="mr-2 rounded bg-stone-100 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-stone-500">
+                    {qr.targetType === 'Product'
+                      ? 'Məhsul'
+                      : qr.targetType === 'Category'
+                        ? 'Kateqoriya'
+                        : 'Arxiv'}
+                  </span>
+                  {qr.targetType === 'Archive'
+                    ? null
+                    : (qr.targetName ?? <span className="text-stone-400">—</span>)}
                 </td>
                 <td className="px-3 py-2">
                   <StatusPill status={qr.status} />

@@ -13,6 +13,7 @@ import {
   useUploadImages,
   type SpecItem,
 } from '../api/products'
+import { useCreateQrCode, useQrCodesForTarget, useSheetDownload } from '../api/qrcodes'
 
 /* ── spesifikasiya redaktoru ───────────────────────── */
 
@@ -89,6 +90,90 @@ function SpecsEditor({ productId, initial }: { productId: string; initial: SpecI
 }
 
 /* ── şəkil paneli ──────────────────────────────────── */
+
+/* ── QR kodlar ──────────────────────────────────────
+   Məhsulun etiketi buradan görünür və çap olunur. Əvvəl belə deyildi: kodlar yalnız
+   ayrı səhifədə idi və orada növ də göstərilmirdi, ona görə "bu modelin kodu hansıdır"
+   sualına cavab ad axtarmaqla verilirdi. Etiket fiziki məhsula yapışdırılır — səhv kod
+   yapışdırmağın geri dönüşü yoxdur. */
+function QrPanel({ productId }: { productId: string }) {
+  const codes = useQrCodesForTarget(productId)
+  const create = useCreateQrCode()
+  const sheet = useSheetDownload()
+
+  const items = codes.data?.items ?? []
+  const active = items.filter(qr => qr.status === 'Active')
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-base font-semibold">QR kodlar</h2>
+      <p className="mt-1 text-sm text-stone-500">
+        Bu modelin etiketləri. Kod bir dəfə çap olunandan sonra silinmir — lazım olsa
+        dayandırılır və ya başqa modelə yönləndirilir.
+      </p>
+
+      {codes.isPending ? (
+        <p className="mt-3 text-sm text-stone-400">Yüklənir…</p>
+      ) : items.length === 0 ? (
+        <p className="mt-3 text-sm text-stone-500">Hələ kod yaradılmayıb.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white">
+          {items.map(qr => (
+            <li key={qr.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <span className="font-mono font-medium">{qr.humanCode}</span>
+              {qr.status !== 'Active' && (
+                <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-stone-500">
+                  dayandırılıb
+                </span>
+              )}
+              <span className="ml-auto flex items-center gap-2">
+                <a
+                  href={`/api/admin/qrcodes/${qr.id}/image.svg`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-800 hover:underline"
+                >
+                  SVG
+                </a>
+                <span className="text-stone-300">·</span>
+                <a
+                  href={`/api/admin/qrcodes/${qr.id}/image.png`}
+                  className="text-emerald-800 hover:underline"
+                >
+                  PNG
+                </a>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={create.isPending}
+          onClick={() => create.mutate({ targetType: 'product', targetId: productId })}
+          className="rounded border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
+        >
+          {create.isPending ? 'Yaradılır…' : 'Yeni kod yarat'}
+        </button>
+        {active.length > 0 && (
+          <button
+            type="button"
+            disabled={sheet.isPending}
+            onClick={() => sheet.mutate(active.map(qr => qr.id))}
+            className="rounded border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
+          >
+            {sheet.isPending ? 'Hazırlanır…' : 'Etiket vərəqi (PDF)'}
+          </button>
+        )}
+      </div>
+      {create.isError && (
+        <p className="mt-2 text-sm text-red-700">{(create.error as Error).message}</p>
+      )}
+    </section>
+  )
+}
 
 function ImagesPanel({ productId }: { productId: string }) {
   const product = useProduct(productId)
@@ -315,6 +400,7 @@ export default function ProductEdit() {
         <>
           <SpecsEditor productId={id} initial={product.data.specs} />
           <ImagesPanel productId={id} />
+          <QrPanel productId={id} />
         </>
       )}
     </div>
