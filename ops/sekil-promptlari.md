@@ -53,6 +53,8 @@ ETMƏ:
 - Şəkilləri repoya commit etmə (yalnız .gitignore sətrini commit et).
 - src/ altındaki heç bir kodu dəyişmə — bu tapşırıq yalnız şəkil hazırlamaqdır.
 - Mövcud .env faylına toxunma.
+- SERVERƏ HEÇ NƏ YÜKLƏMƏ və deploy etmə: nə scp, nə ssh, nə docker. Şəkilləri yalnız
+  lokal `sekiller/` qovluğuna yaz — yükləməni ayrıca biz edəcəyik.
 
 API açarı yoxdursa DAYAN və bunu bildir. Şəkilləri Pillow ilə "çəkmə" — düz rəngli
 plasholder kataloqu real göstərmir, məqsəd məhz odur.
