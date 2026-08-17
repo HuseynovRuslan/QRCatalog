@@ -1,4 +1,4 @@
-@model QrCatalog.Web.Pages.PublicProductVm
+﻿@model QrCatalog.Web.Pages.PublicProductVm
 
 <article class="mx-auto max-w-2xl px-4 pb-24 pt-6">
     <nav aria-label="Yol" class="text-xs text-stone-400">
@@ -68,6 +68,11 @@
         <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-stone-700">
             Sorğu göndərin — sizinlə əlaqə saxlayaq
         </summary>
+        @* Forma QƏSDƏN method/action daşımır: göndərmə public.js-dən fetch ilə JSON kimi
+           gedir (public endpoint honeypot + rate limit ilə qorunur). Buraya method="post"
+           əlavə etmək Razor-un antiforgery tokenini və COOKIE-sini gətirir; Set-Cookie
+           daşıyan cavabı isə output cache SAXLAMIR — skanın düşdüyü əsas səhifə keşsiz
+           qalar. PublicSiteTests bunu yoxlayır (6a/6b bəndləri). *@
         <form id="inquiry-form" class="border-t border-stone-100 px-4 py-4">
             <input type="hidden" name="productSlug" value="@Model.Slug" />
             <input type="hidden" name="qrToken" value="@Model.QrToken" />
@@ -128,3 +133,4 @@
 </article>
 
 @* Qalereya, sorğu forması və beacon məntiqi wwwroot/js/public.js-dədir — CSP script-src 'self' *@
+

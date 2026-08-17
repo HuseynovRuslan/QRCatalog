@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace QrCatalog.IntegrationTests;
 
@@ -135,8 +137,36 @@ public sealed class PublicSiteTests : IAsyncLifetime
         _ = await anon.GetStringAsync("/p/bahama-sezlonq"); // keşə düşdü
         await SendJsonAsync(admin, HttpMethod.Put, $"/api/admin/products/{bahama.Id}",
             new { name = "Bahama şezlonq PRO", categoryId = category.Id });
-        var refreshed = await anon.GetStringAsync("/p/bahama-sezlonq");
-        Assert.Contains("Bahama şezlonq PRO", refreshed);
+        var refreshed = await anon.GetAsync("/p/bahama-sezlonq");
+        Assert.Contains("Bahama şezlonq PRO", await refreshed.Content.ReadAsStringAsync());
+
+        // 6a. Cavab COOKIE QOYMAMALIDIR: Set-Cookie daşıyan cavabı output cache saxlamır,
+        // yəni bir cookie skanın düşdüyü əsas səhifəni səssizcə keşsiz qoyar. Sorğu forması
+        // buna görə method/action daşımır (bax _ProductView.cshtml şərhi).
+        Assert.False(refreshed.Headers.Contains("Set-Cookie"),
+            "Public səhifə Set-Cookie qaytarır — output cache belə cavabı saxlamır: " +
+            string.Join(" | ", refreshed.Headers.TryGetValues("Set-Cookie", out var sc) ? sc : []));
+
+        // 6b. Keşin HƏQİQƏTƏN işlədiyini sübut et: adı xam SQL ilə dəyiş — SaveChanges
+        // olmadığı üçün PublicCacheInvalidationInterceptor teqi boşaltmır. Səhifə keşdən
+        // gəlirsə köhnə ad qalır. Bu olmasa 6-cı bənd keş sönük olanda da "keçər".
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider
+                .GetRequiredService<QrCatalog.Infrastructure.Persistence.AppDbContext>();
+            var affected = await db.Database.ExecuteSqlRawAsync(
+                """UPDATE "ProductTranslation" SET "Name" = 'Keşdən kənar ad' WHERE "ProductId" = {0}""",
+                bahama.Id);
+            // Sətir dəyişməsə aşağıdaki assert boş yerə keçər — testin özünü yoxla
+            Assert.Equal(1, affected);
+        }
+        var cached = await anon.GetStringAsync("/p/bahama-sezlonq");
+        Assert.DoesNotContain("Keşdən kənar ad", cached);
+        Assert.Contains("Bahama şezlonq PRO", cached);
+
+        // Testin qalan hissəsi real adla işləsin
+        await SendJsonAsync(admin, HttpMethod.Put, $"/api/admin/products/{bahama.Id}",
+            new { name = "Bahama şezlonq PRO", categoryId = category.Id });
 
         // 7. Arxiv: səhifə izahlı qalır, oxşarlar təklif olunur
         var oxsar = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/products",
