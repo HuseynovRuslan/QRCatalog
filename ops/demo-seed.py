@@ -8,8 +8,10 @@ skan qrafiki və müraciətlər dolu olmalıdır. Bu skript hamısını yaradır
     python3 ops/demo-seed.py --wipe    # bazanı sıfırlayıb yenidən qurur
     python3 ops/demo-seed.py --clean   # yalnız silir (real işə başlamaq üçün)
 
-ŞƏKİLLƏR DAXİL DEYİL. Hazır şəkilləri SKU adı ilə (məs. SZ-BH-AG.png) bir qovluğa yığıb
-`python3 ops/upload-images.py <qovluq>` ilə toplu yükləyin.
+ŞƏKİLLƏR: repo kökündəki `sekiller/` qovluğunda SKU adı ilə (məs. `SZ-AK-KL.png`) fayllar
+varsa, seed-in SONUNDA avtomatik yüklənir. Bu addım MƏCBURİDİR, çünki `--wipe` şəkil
+volume-unu da təmizləyir — əl ilə yükləmək yaddan çıxdıqda kataloq «şəkil hazırlanır»
+göstərir və bunu yalnız kimsə sayta baxanda görür (bir dəfə məhz belə oldu).
 
 Skan tarixçəsi qəsdən SQL ilə yazılır: API-dən 120 skan göndərmək rate limit-ə düşər və
 hamısı "bu gün" görünərdi — qrafik isə 30 günlük seriya göstərməlidir.
@@ -452,6 +454,28 @@ def seed(client):
     print(f"  {total} skan yazıldı")
 
 
+def reattach_images(base):
+    """--wipe şəkil volume-unu da təmizləyir. Mənbə PNG-lər `sekiller/`-dədirsə onları
+    avtomatik geri yükləyir: əks halda demo şəkilsiz qalır və bunu yalnız kimsə sayta
+    baxanda görür (bir dəfə məhz belə oldu — kataloq «şəkil hazırlanır» göstərirdi)."""
+    folder = os.path.join(REPO, "sekiller")
+    if not os.path.isdir(folder):
+        print("QEYD: sekiller/ qovluğu yoxdur — şəkillər yüklənmədi.")
+        return
+    files = [n for n in os.listdir(folder)
+             if os.path.splitext(n)[1].lower() in {".png", ".jpg", ".jpeg", ".webp"}]
+    if not files:
+        return
+
+    print(f"Şəkillər geri yüklənir ({len(files)} fayl)…")
+    result = subprocess.run(
+        ["python3", os.path.join(REPO, "ops", "upload-images.py"), folder, "--base", base],
+        cwd=REPO, capture_output=True, text=True)
+    tail = (result.stdout or result.stderr).strip().splitlines()[-3:]
+    for line in tail:
+        print(f"  {line}")
+
+
 def summary(client):
     dashboard = client.get("/api/admin/stats/dashboard")
     print("\n=== Panel ===")
@@ -497,6 +521,7 @@ def main():
         raise SystemExit(f"Sistemdə artıq {len(items)} məhsul var. Sıfırlamaq üçün: --wipe")
 
     seed(client)
+    reattach_images(args.base)
     summary(client)
 
 
