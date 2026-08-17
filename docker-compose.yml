@@ -29,8 +29,14 @@ services:
         condition: service_healthy
     healthcheck:
       # Konfiqurasiya xətasında tətbiq qalxmır; healthcheck olmasa `docker compose ps`
-      # bunu göstərmir və problem gözdən qaçır
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -q Healthy"]
+      # bunu göstərmir və problem gözdən qaçır.
+      #
+      # NİYƏ wget/curl YOX: aspnet runtime image-ində onların heç biri quraşdırılmayıb
+      # (ilk deploy-da healthcheck məhz buna görə "unhealthy" verirdi, halbuki tətbiq
+      # sağlam idi). Bash-in öz TCP yönləndirməsi ilə əsl HTTP sorğusu göndərilir —
+      # image-ə əlavə paket lazım deyil. /health cavabı "Healthy" sətrini daşımalıdır,
+      # yəni yalnız port deyil, bazaya bağlantı da yoxlanılır.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q Healthy <&3"]
       interval: 30s
       timeout: 5s
       retries: 3
