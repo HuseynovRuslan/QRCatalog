@@ -1,20 +1,29 @@
 @model QrCatalog.Web.Pages.PublicProductCardVm
 
-<a href="/p/@Model.Slug"
-   class="block overflow-hidden rounded-xl border border-stone-200 bg-white transition hover:border-emerald-700/40 hover:shadow-sm">
-    @if (Model.ThumbUrl is not null)
-    {
-        <img src="@Model.ThumbUrl" srcset="@Model.ThumbSrcset"
-             sizes="(max-width: 640px) 50vw, 200px"
-             alt="@Model.Name" loading="lazy"
-             class="aspect-square w-full bg-stone-100 object-cover" />
-    }
-    else
-    {
-        <div class="aspect-square w-full bg-stone-100"></div>
-    }
-    <div class="p-3">
-        <p class="line-clamp-2 text-sm font-medium">@Model.Name</p>
-        <p class="mt-0.5 text-xs text-stone-400">@Model.CategoryName</p>
+<a href="/p/@Model.Slug" class="product-card reveal">
+    <figure class="product-card__media">
+        @if (Model.ThumbUrl is not null)
+        {
+            <img src="@Model.ThumbUrl" srcset="@Model.ThumbSrcset"
+                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 360px"
+                 alt="@Model.Name" loading="lazy" />
+        }
+        else
+        {
+            <div class="product-card__placeholder" aria-hidden="true">
+                <svg viewBox="0 0 120 120" fill="none">
+                    <path d="M23 87c27-4 54-25 74-61M34 69c-1-18 8-31 25-39 3 18-5 31-25 39Zm23 2c10-15 23-21 40-18-8 17-22 23-40 18Z" />
+                </svg>
+            </div>
+        }
+        <span class="product-card__view">Ətraflı bax <i aria-hidden="true">↗</i></span>
+    </figure>
+    <div class="product-card__body">
+        <p>@Model.CategoryName</p>
+        <h3>@Model.Name</h3>
+        <div class="product-card__footer">
+            <span>Materialı və ölçüləri kəşf et</span>
+            <i aria-hidden="true">→</i>
+        </div>
     </div>
 </a>

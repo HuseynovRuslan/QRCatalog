@@ -1,136 +1,190 @@
-﻿@model QrCatalog.Web.Pages.PublicProductVm
+@model QrCatalog.Web.Pages.PublicProductVm
 
-<article class="mx-auto max-w-2xl px-4 pb-24 pt-6">
-    <nav aria-label="Yol" class="text-xs text-stone-400">
-        <a href="/katalog" class="hover:text-emerald-800 hover:underline">Kataloq</a>
-        <span aria-hidden="true"> › </span>
-        <a href="/katalog/@Model.CategorySlug" class="hover:text-emerald-800 hover:underline">@Model.CategoryName</a>
-    </nav>
+<article class="product-page">
+    <div class="site-shell">
+        <nav aria-label="Yol" class="breadcrumb reveal">
+            <a href="/katalog">Kataloq</a>
+            <span class="breadcrumb__divider" aria-hidden="true">/</span>
+            <a href="/katalog/@Model.CategorySlug">@Model.CategoryName</a>
+            <span class="breadcrumb__divider" aria-hidden="true">/</span>
+            <span aria-current="page">@Model.Name</span>
+        </nav>
 
-    @if (Model.Images.Count > 0)
-    {
-        <div class="mt-4">
-            <img id="main-image"
-                 src="@Model.Images[0].MainUrl"
-                 srcset="@Model.Images[0].Srcset"
-                 sizes="(max-width: 672px) 100vw, 672px"
-                 alt="@(Model.Images[0].Alt ?? Model.Name)"
-                 class="aspect-[4/3] w-full rounded-xl bg-stone-100 object-cover" />
+        <div class="product-layout">
+            <section class="product-gallery reveal" aria-label="Məhsul şəkilləri">
+                @if (Model.Images.Count > 0)
+                {
+                    <div class="product-gallery__stage">
+                        <img id="main-image"
+                             src="@Model.Images[0].MainUrl"
+                             srcset="@Model.Images[0].Srcset"
+                             sizes="(max-width: 900px) 100vw, 720px"
+                             alt="@(Model.Images[0].Alt ?? Model.Name)" />
+                        <span class="product-gallery__label">Natural collection</span>
+                        <span class="product-gallery__count">01 / @Model.Images.Count.ToString("00")</span>
+                    </div>
 
-            @if (Model.Images.Count > 1)
-            {
-                <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
-                    @for (var i = 0; i < Model.Images.Count; i++)
+                    @if (Model.Images.Count > 1)
                     {
-                        var image = Model.Images[i];
-                        <button type="button"
-                                class="thumb h-16 w-16 flex-none overflow-hidden rounded-lg border-2 @(i == 0 ? "border-emerald-700" : "border-transparent")"
-                                data-src="@image.MainUrl" data-srcset="@image.Srcset"
-                                data-alt="@(image.Alt ?? Model.Name)"
-                                aria-label="Şəkil @(i + 1)">
-                            <img src="@image.ThumbUrl" alt="" loading="lazy"
-                                 class="h-full w-full object-cover" />
-                        </button>
+                        <div class="product-gallery__thumbs" aria-label="Digər şəkillər">
+                            @for (var i = 0; i < Model.Images.Count; i++)
+                            {
+                                var image = Model.Images[i];
+                                <button type="button"
+                                        class="thumb @(i == 0 ? "is-active" : "")"
+                                        data-src="@image.MainUrl" data-srcset="@image.Srcset"
+                                        data-alt="@(image.Alt ?? Model.Name)"
+                                        data-index="@((i + 1).ToString("00"))"
+                                        aria-label="Şəkil @(i + 1)"
+                                        aria-pressed="@(i == 0 ? "true" : "false")">
+                                    <img src="@image.ThumbUrl" alt="" loading="lazy" />
+                                </button>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="product-gallery__stage product-gallery__placeholder">
+                        <svg viewBox="0 0 160 160" fill="none" aria-hidden="true">
+                            <path d="M31 122c36-5 72-33 99-81M45 98c-1-24 11-41 33-52 4 24-6 42-33 52Zm30 3c13-20 31-28 54-24-11 23-29 31-54 24Z" />
+                        </svg>
+                        <p>Şəkil hazırlanır</p>
+                    </div>
+                }
+            </section>
+
+            <section class="product-info reveal">
+                <div class="product-info__meta">
+                    <a href="/katalog/@Model.CategorySlug">@Model.CategoryName</a>
+                    @if (Model.HumanCode is not null)
+                    {
+                        <span>@Model.HumanCode</span>
                     }
                 </div>
-            }
-        </div>
-    }
 
-    @if (Model.HumanCode is not null)
-    {
-        <p class="mt-5 font-mono text-xs tracking-wide text-stone-400">@Model.HumanCode</p>
-    }
-    <h1 class="mt-1 text-2xl font-semibold tracking-tight text-balance">@Model.Name</h1>
+                <h1>@Model.Name</h1>
 
-    @if (Model.Description is not null)
-    {
-        <p class="mt-3 leading-relaxed text-stone-600">@Model.Description</p>
-    }
+                @if (Model.Description is not null)
+                {
+                    <p class="product-info__description">@Model.Description</p>
+                }
 
-    @if (Model.Specs.Count > 0)
-    {
-        <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-stone-400">
-            Texniki göstəricilər
-        </h2>
-        <dl class="mt-2 divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white">
-            @foreach (var spec in Model.Specs)
-            {
-                <div class="flex justify-between gap-4 px-4 py-2.5 text-sm">
-                    <dt class="text-stone-500">@spec.Label</dt>
-                    <dd class="text-right font-medium">@spec.Value</dd>
+                <div class="product-promises">
+                    <div>
+                        <svg viewBox="0 0 32 32" aria-hidden="true">
+                            <path d="M16 27V10m0 9c-5-1-8-4-9-9 5 0 8 3 9 9Zm0-4c4-1 7-4 8-9-5 0-8 3-8 9Z" />
+                        </svg>
+                        <span><strong>Təbii görünüş</strong>Materialın öz xarakteri</span>
+                    </div>
+                    <div>
+                        <svg viewBox="0 0 32 32" aria-hidden="true">
+                            <path d="M7 22h18M9 22v4m14-4v4M10 22l2-11h8l2 11M13 11V7h6v4" />
+                        </svg>
+                        <span><strong>Açıq hava üçün</strong>Rahat və funksional</span>
+                    </div>
                 </div>
-            }
-        </dl>
-    }
 
-    <details class="mt-6 rounded-xl border border-stone-200 bg-white">
-        <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-stone-700">
-            Sorğu göndərin — sizinlə əlaqə saxlayaq
-        </summary>
-        @* Forma QƏSDƏN method/action daşımır: göndərmə public.js-dən fetch ilə JSON kimi
-           gedir (public endpoint honeypot + rate limit ilə qorunur). Buraya method="post"
-           əlavə etmək Razor-un antiforgery tokenini və COOKIE-sini gətirir; Set-Cookie
-           daşıyan cavabı isə output cache SAXLAMIR — skanın düşdüyü əsas səhifə keşsiz
-           qalar. PublicSiteTests bunu yoxlayır (6a/6b bəndləri). *@
-        <form id="inquiry-form" class="border-t border-stone-100 px-4 py-4">
-            <input type="hidden" name="productSlug" value="@Model.Slug" />
-            <input type="hidden" name="qrToken" value="@Model.QrToken" />
-            @* Honeypot — insanlar görmür, botlar doldurur *@
-            <input type="text" name="website" tabindex="-1" autocomplete="off"
-                   class="absolute -left-[9999px] h-0 w-0 opacity-0" aria-hidden="true" />
+                @if (Model.Specs.Count > 0)
+                {
+                    <section class="specs-panel">
+                        <div class="specs-panel__heading">
+                            <p class="eyebrow"><span></span> Məhsul detalları</p>
+                            <h2>Texniki göstəricilər</h2>
+                        </div>
+                        <dl>
+                            @foreach (var spec in Model.Specs)
+                            {
+                                <div>
+                                    <dt>@spec.Label</dt>
+                                    <dd>@spec.Value</dd>
+                                </div>
+                            }
+                        </dl>
+                    </section>
+                }
 
-            <label class="block">
-                <span class="text-sm font-medium text-stone-700">Adınız</span>
-                <input name="name" required maxlength="200"
-                       class="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
-            </label>
-            <label class="mt-3 block">
-                <span class="text-sm font-medium text-stone-700">Telefon</span>
-                <input name="phone" type="tel" required maxlength="30" placeholder="+994 50 123 45 67"
-                       class="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
-            </label>
-            <label class="mt-3 block">
-                <span class="text-sm font-medium text-stone-700">Mesaj (istəyə görə)</span>
-                <textarea name="message" rows="2" maxlength="4000"
-                          class="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"></textarea>
-            </label>
+                <details class="inquiry-panel">
+                    <summary>
+                        <span>
+                            <small>Qərar verməyə kömək edək</small>
+                            Sorğu göndərin — sizinlə əlaqə saxlayaq
+                        </span>
+                        <i aria-hidden="true">+</i>
+                    </summary>
+                    @* Forma QƏSDƏN method/action daşımır: göndərmə public.js-dən fetch ilə JSON kimi
+                       gedir (public endpoint honeypot + rate limit ilə qorunur). Buraya method="post"
+                       əlavə etmək Razor-un antiforgery tokenini və COOKIE-sini gətirir; Set-Cookie
+                       daşıyan cavabı isə output cache SAXLAMIR — skanın düşdüyü əsas səhifə keşsiz
+                       qalar. PublicSiteTests bunu yoxlayır (6a/6b bəndləri). *@
+                    <form id="inquiry-form">
+                        <input type="hidden" name="productSlug" value="@Model.Slug" />
+                        <input type="hidden" name="qrToken" value="@Model.QrToken" />
+                        <input type="text" name="website" tabindex="-1" autocomplete="off"
+                               class="honeypot" aria-hidden="true" />
 
-            <p id="inquiry-error" role="alert" hidden
-               class="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800"></p>
+                        <div class="form-grid">
+                            <label>
+                                <span>Adınız</span>
+                                <input name="name" required maxlength="200" placeholder="Ad və soyad" />
+                            </label>
+                            <label>
+                                <span>Telefon</span>
+                                <input name="phone" type="tel" required maxlength="30" placeholder="+994 50 123 45 67" />
+                            </label>
+                        </div>
+                        <label>
+                            <span>Mesaj <small>istəyə görə</small></span>
+                            <textarea name="message" rows="3" maxlength="4000"
+                                      placeholder="Məhsul haqqında nə bilmək istərdiniz?"></textarea>
+                        </label>
 
-            <button type="submit"
-                    class="mt-4 w-full rounded-lg border border-emerald-800 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">
-                Göndər
-            </button>
-        </form>
-        <p id="inquiry-done" hidden class="border-t border-stone-100 px-4 py-4 text-sm text-emerald-800">
-            Sorğunuz qəbul olundu — tezliklə sizinlə əlaqə saxlayacağıq. ✓
-        </p>
-    </details>
+                        <p id="inquiry-error" role="alert" hidden class="form-message form-message--error"></p>
+
+                        <button type="submit" class="button button--primary button--wide">
+                            Göndər <span aria-hidden="true">↗</span>
+                        </button>
+                    </form>
+                    <div id="inquiry-done" hidden class="form-message form-message--success">
+                        <span aria-hidden="true">✓</span>
+                        <div>
+                            <strong>Sorğunuz qəbul olundu</strong>
+                            <p>Tezliklə sizinlə əlaqə saxlayacağıq.</p>
+                        </div>
+                    </div>
+                </details>
+            </section>
+        </div>
+    </div>
 
     @if (Model.WhatsappUrl is not null || Model.Phone is not null)
     {
-        <div class="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white/95 p-3 backdrop-blur">
-            <div class="mx-auto flex max-w-2xl gap-2">
-                @if (Model.WhatsappUrl is not null)
-                {
-                    <a href="@Model.WhatsappUrl"
-                       class="flex-1 rounded-lg bg-emerald-800 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-700">
-                        Qiymət və sifariş — WhatsApp
-                    </a>
-                }
-                @if (Model.Phone is not null)
-                {
-                    <a href="tel:@Model.Phone"
-                       class="rounded-lg border border-emerald-800 px-4 py-3 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">
-                        Zəng et
-                    </a>
-                }
+        <div class="contact-dock">
+            <div class="site-shell contact-dock__inner">
+                <div class="contact-dock__copy">
+                    <span>Bu modeli bəyəndiniz?</span>
+                    <strong>Qiymət və mövcudluğu indi soruşun.</strong>
+                </div>
+                <div class="contact-dock__actions">
+                    @if (Model.Phone is not null)
+                    {
+                        <a href="tel:@Model.Phone" class="contact-dock__phone">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7.5 3.5 10 8 8.5 9.5c1.1 2.2 2.8 3.9 5 5L15 13l4.5 2.5-1 4c-.2.8-.9 1.3-1.7 1.2C9.8 19.9 4.1 14.2 3.3 7.2c-.1-.8.4-1.5 1.2-1.7l3-2Z" />
+                            </svg>
+                            Zəng et
+                        </a>
+                    }
+                    @if (Model.WhatsappUrl is not null)
+                    {
+                        <a href="@Model.WhatsappUrl" class="button button--primary">
+                            WhatsApp ilə qiymət soruş <span aria-hidden="true">↗</span>
+                        </a>
+                    }
+                </div>
             </div>
         </div>
     }
 </article>
 
 @* Qalereya, sorğu forması və beacon məntiqi wwwroot/js/public.js-dədir — CSP script-src 'self' *@
-

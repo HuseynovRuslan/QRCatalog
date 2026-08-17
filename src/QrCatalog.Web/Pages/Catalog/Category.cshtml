@@ -4,73 +4,120 @@
     ViewData["Title"] = Model.Name;
 }
 
-<div class="mx-auto max-w-4xl px-4 py-6">
-    <nav aria-label="Yol" class="text-xs text-stone-400">
-        @for (var i = 0; i < Model.Breadcrumbs.Count; i++)
-        {
-            var crumb = Model.Breadcrumbs[i];
-            if (crumb.Url is null)
+<section class="category-hero">
+    <div class="site-shell">
+        <nav aria-label="Yol" class="breadcrumb breadcrumb--light reveal">
+            @for (var i = 0; i < Model.Breadcrumbs.Count; i++)
             {
-                <span class="text-stone-600">@crumb.Name</span>
-            }
-            else
-            {
-                <a href="@crumb.Url" class="hover:text-emerald-800 hover:underline">@crumb.Name</a>
-            }
-            @if (i < Model.Breadcrumbs.Count - 1)
-            {
-                <span aria-hidden="true"> › </span>
-            }
-        }
-    </nav>
-
-    <h1 class="mt-2 text-2xl font-semibold tracking-tight">@Model.Name</h1>
-    @if (Model.Description is not null)
-    {
-        <p class="mt-2 text-stone-600">@Model.Description</p>
-    }
-
-    @if (Model.Children.Count > 0)
-    {
-        <div class="mt-4 flex flex-wrap gap-2">
-            @foreach (var child in Model.Children)
-            {
-                <a href="/katalog/@child.Slug"
-                   class="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm hover:border-emerald-700/40">
-                    @child.Name <span class="text-stone-400">@child.ProductCount</span>
-                </a>
-            }
-        </div>
-    }
-
-    @if (Model.Products.Count == 0 && Model.Children.Count == 0)
-    {
-        <p class="mt-10 text-center text-sm text-stone-400">Bu kateqoriyada hələ məhsul yoxdur.</p>
-    }
-    else if (Model.Products.Count > 0)
-    {
-        <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            @foreach (var card in Model.Products)
-            {
-                <partial name="_ProductCard" model="card" />
-            }
-        </div>
-    }
-
-    @if (Model.TotalPages > 1)
-    {
-        <nav class="mt-8 flex items-center justify-center gap-3 text-sm" aria-label="Səhifələr">
-            @if (Model.CurrentPage > 1)
-            {
-                <a href="/katalog/@Model.Slug?seh=@(Model.CurrentPage - 1)"
-                   class="rounded border border-stone-300 px-3 py-1.5 hover:bg-stone-50">‹ Əvvəlki</a>
-            }
-            <span class="tabular-nums text-stone-500">@Model.CurrentPage / @Model.TotalPages</span>
-            @if (Model.CurrentPage < Model.TotalPages)
-            {
-                <a href="/katalog/@Model.Slug?seh=@(Model.CurrentPage + 1)"
-                   class="rounded border border-stone-300 px-3 py-1.5 hover:bg-stone-50">Növbəti ›</a>
+                var crumb = Model.Breadcrumbs[i];
+                if (crumb.Url is null)
+                {
+                    <span aria-current="page">@crumb.Name</span>
+                }
+                else
+                {
+                    <a href="@crumb.Url">@crumb.Name</a>
+                }
+                @if (i < Model.Breadcrumbs.Count - 1)
+                {
+                    <span class="breadcrumb__divider" aria-hidden="true">/</span>
+                }
             }
         </nav>
-    }
-</div>
+
+        <div class="category-hero__row">
+            <div class="reveal">
+                <p class="eyebrow eyebrow--light"><span></span> Seçilmiş kolleksiya</p>
+                <h1>@Model.Name</h1>
+                @if (Model.Description is not null)
+                {
+                    <p>@Model.Description</p>
+                }
+                else
+                {
+                    <p>Təbii material, rahat forma və açıq hava üçün düşünülmüş detallar.</p>
+                }
+            </div>
+            <div class="category-hero__count reveal">
+                <strong>@Model.Total.ToString("00")</strong>
+                <span>məhsul</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="catalog-main catalog-main--category">
+    <div class="site-shell">
+        @if (Model.Children.Count > 0)
+        {
+            <div class="section-heading reveal">
+                <div>
+                    <p class="eyebrow"><span></span> Alt kolleksiyalar</p>
+                    <h2>Daha dəqiq seçim</h2>
+                </div>
+            </div>
+            <div class="category-grid category-grid--compact">
+                @foreach (var child in Model.Children)
+                {
+                    <a href="/katalog/@child.Slug" class="category-card reveal">
+                        <span class="category-card__number">@child.ProductCount.ToString("00")</span>
+                        <div>
+                            <h3>@child.Name</h3>
+                            <p>@(child.Description ?? "Kolleksiyanı kəşf edin")</p>
+                        </div>
+                        <span class="category-card__arrow" aria-hidden="true">↗</span>
+                    </a>
+                }
+            </div>
+        }
+
+        @if (Model.Products.Count == 0 && Model.Children.Count == 0)
+        {
+            <div class="empty-state reveal">
+                <span aria-hidden="true">✦</span>
+                <h2>Yeni modellər yoldadır</h2>
+                <p>Bu kateqoriya üçün seçdiyimiz məhsullar tezliklə burada olacaq.</p>
+                <a class="button button--outline" href="/katalog">Kataloqa qayıt</a>
+            </div>
+        }
+        else if (Model.Products.Count > 0)
+        {
+            <div class="section-heading section-heading--products reveal">
+                <div>
+                    <p class="eyebrow"><span></span> @Model.Name</p>
+                    <h2>Kolleksiyaya bax</h2>
+                </div>
+                <p>@Model.Total məhsul</p>
+            </div>
+            <div class="product-grid">
+                @foreach (var card in Model.Products)
+                {
+                    <partial name="_ProductCard" model="card" />
+                }
+            </div>
+        }
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="pagination" aria-label="Səhifələr">
+                @if (Model.CurrentPage > 1)
+                {
+                    <a href="/katalog/@Model.Slug?seh=@(Model.CurrentPage - 1)">← Əvvəlki</a>
+                }
+                else
+                {
+                    <span></span>
+                }
+                <span class="pagination__count">@Model.CurrentPage <i>/</i> @Model.TotalPages</span>
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a href="/katalog/@Model.Slug?seh=@(Model.CurrentPage + 1)">Növbəti →</a>
+                }
+                else
+                {
+                    <span></span>
+                }
+            </nav>
+        }
+    </div>
+</section>

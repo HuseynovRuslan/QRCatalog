@@ -2,7 +2,7 @@
 @model QrCatalog.Web.Pages.QModel
 @{
     ViewData["Title"] = Model.Title;
-    ViewData["QrToken"] = Model.Token; // public.js beacon-u body data-atributundan oxuyur
+    ViewData["QrToken"] = Model.Token;
 }
 
 @if (Model.State == QrCatalog.Web.Pages.QState.Found && Model.Product is not null)
@@ -11,37 +11,50 @@
 }
 else
 {
-    <div class="flex min-h-screen flex-col items-center justify-center px-4">
-        <div class="w-full max-w-md text-center">
+    <section class="status-section">
+        <div class="status-card reveal">
+            <div class="status-card__mark" aria-hidden="true">
+                @(Model.State == QrCatalog.Web.Pages.QState.Retired ? "×" : "!")
+            </div>
             @if (Model.HumanCode is not null)
             {
-                <p class="font-mono text-xs tracking-wide text-stone-400">@Model.HumanCode</p>
+                <p class="status-card__code">@Model.HumanCode</p>
             }
 
             @if (Model.State == QrCatalog.Web.Pages.QState.Retired)
             {
-                <h1 class="mt-2 text-2xl font-semibold tracking-tight">Bu kod artıq istifadədə deyil</h1>
-                <p class="mt-3 text-stone-600">Məhsul haqqında məlumat üçün satıcı ilə əlaqə saxlayın.</p>
+                <p class="eyebrow"><span></span> Məlumat yenilənib</p>
+                <h1>Bu kod artıq istifadədə deyil</h1>
+                <p>Məhsul haqqında ən son məlumat üçün satıcı ilə əlaqə saxlayın.</p>
             }
             else if (Model.State == QrCatalog.Web.Pages.QState.Archived)
             {
-                <h1 class="mt-2 text-2xl font-semibold tracking-tight">Bu model artıq istehsal olunmur</h1>
-                <p class="mt-3 text-stone-600">Oxşar modellərə baxın və ya satıcı ilə əlaqə saxlayın.</p>
+                <p class="eyebrow"><span></span> Arxiv kolleksiyası</p>
+                <h1>Bu model artıq istehsal olunmur</h1>
+                <p>Yeni kolleksiyadan oxşar modellərə baxın və sizə uyğun seçimi tapın.</p>
             }
             else
             {
-                <h1 class="mt-2 text-2xl font-semibold tracking-tight">Kod tapılmadı</h1>
-                <p class="mt-3 text-stone-600">
-                    Bu QR kod sistemdə qeydiyyatda deyil. Ünvanı yoxlayın və ya satıcı ilə əlaqə saxlayın.
-                </p>
+                <p class="eyebrow"><span></span> Kod tanınmadı</p>
+                <h1>Kod tapılmadı</h1>
+                <p>QR kodu yenidən skan edin və ya ünvanın düzgün olduğuna əmin olun.</p>
             }
+
+            <a class="button button--primary" href="/katalog">
+                Kolleksiyaya bax <span aria-hidden="true">↗</span>
+            </a>
         </div>
 
         @if (Model.Similar.Count > 0)
         {
-            <div class="mt-10 w-full max-w-2xl">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-stone-400">Oxşar modellər</h2>
-                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="site-shell similar-section">
+                <div class="section-heading reveal">
+                    <div>
+                        <p class="eyebrow"><span></span> Sizin üçün seçdik</p>
+                        <h2>Oxşar modellər</h2>
+                    </div>
+                </div>
+                <div class="product-grid product-grid--similar">
                     @foreach (var card in Model.Similar)
                     {
                         <partial name="_ProductCard" model="card" />
@@ -49,5 +62,5 @@ else
                 </div>
             </div>
         }
-    </div>
+    </section>
 }

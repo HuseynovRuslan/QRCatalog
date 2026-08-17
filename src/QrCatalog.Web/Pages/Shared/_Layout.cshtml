@@ -4,13 +4,55 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — QrCatalog</title>
+    <meta name="theme-color" content="#173f32" />
+    <meta name="description" content="Açıq hava məkanları üçün seçilmiş mebel kolleksiyası." />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body class="min-h-screen bg-stone-50 text-stone-900 antialiased"
+<body class="site-body"
       data-qr-token="@(ViewData["QrToken"] as string)">
-    <main>
+    <a class="skip-link" href="#main-content">Məzmuna keç</a>
+
+    <header class="site-header">
+        <div class="site-shell site-header__inner">
+            <a class="brand" href="/katalog" aria-label="QrCatalog kataloqu">
+                <span class="brand__mark" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" fill="none">
+                        <path d="M11 31.5C11 20.2 18.6 10.8 36.5 8c-.4 17.2-8.9 27-21.2 27" />
+                        <path d="M12 39c4.6-12.5 11.7-19.8 21-26" />
+                    </svg>
+                </span>
+                <span class="brand__copy">
+                    <strong>QR<span>CATALOG</span></strong>
+                    <small>Outdoor collection</small>
+                </span>
+            </a>
+
+            <nav class="site-nav" aria-label="Əsas naviqasiya">
+                <a href="/katalog">Kolleksiya</a>
+                <a class="site-nav__cta" href="/katalog#axtaris">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                    </svg>
+                    Məhsul axtar
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content">
         @RenderBody()
     </main>
+
+    <footer class="site-footer">
+        <div class="site-shell site-footer__inner">
+            <div>
+                <p class="site-footer__brand">Təbiətdən ilhamlanan rahatlıq.</p>
+                <p class="site-footer__note">Açıq hava məkanları üçün düşünülmüş kolleksiya.</p>
+            </div>
+            <a href="/katalog">Kolleksiyaya bax <span aria-hidden="true">↗</span></a>
+        </div>
+    </footer>
+
     <script src="~/js/public.js" asp-append-version="true" defer></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

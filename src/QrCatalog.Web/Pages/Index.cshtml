@@ -4,9 +4,59 @@
     ViewData["Title"] = "Ana səhifə";
 }
 
-<div class="flex min-h-screen items-center justify-center">
-    <div class="text-center">
-        <h1 class="text-3xl font-semibold tracking-tight">QrCatalog</h1>
-        <p class="mt-2 text-stone-500">Sistem hazırlanır.</p>
+<section class="home-hero">
+    <div class="home-hero__orb home-hero__orb--one" aria-hidden="true"></div>
+    <div class="home-hero__orb home-hero__orb--two" aria-hidden="true"></div>
+    <div class="site-shell home-hero__inner">
+        <div class="home-hero__content reveal">
+            <p class="eyebrow"><span></span> Yeni mövsüm kolleksiyası</p>
+            <h1>Məkanını<br /><em>təbiətlə</em> tamamla.</h1>
+            <p class="home-hero__lead">
+                Uzun illər sizinlə qalacaq, təbii materiallardan hazırlanmış açıq hava mebellərini kəşf edin.
+            </p>
+            <div class="home-hero__actions">
+                <a class="button button--primary" href="/katalog">
+                    Kolleksiyanı kəşf et
+                    <span aria-hidden="true">↗</span>
+                </a>
+                <span class="home-hero__hint">QR ilə bax · Asan sorğu · Birbaşa əlaqə</span>
+            </div>
+        </div>
+
+        <div class="home-hero__art reveal" aria-hidden="true">
+            <div class="home-hero__sun"></div>
+            <div class="home-hero__line home-hero__line--one"></div>
+            <div class="home-hero__line home-hero__line--two"></div>
+            <div class="home-hero__badge">
+                <strong>01</strong>
+                <span>Seçilmiş<br />kolleksiya</span>
+            </div>
+            <svg class="home-hero__leaf" viewBox="0 0 300 420" fill="none">
+                <path d="M143 401C128 272 165 143 269 29" />
+                <path d="M158 318c-50-20-91-62-118-119 68-3 112 36 118 119Z" />
+                <path d="M169 247c40-10 75-40 102-88-54-6-91 24-102 88Z" />
+                <path d="M194 166c-25-24-36-59-31-103 46 24 56 62 31 103Z" />
+            </svg>
+        </div>
     </div>
-</div>
+</section>
+
+<section class="home-values">
+    <div class="site-shell home-values__grid">
+        <article class="reveal">
+            <span>01</span>
+            <h2>Təbii material</h2>
+            <p>Hər detalda görünən ağac teksturası və zamansız görünüş.</p>
+        </article>
+        <article class="reveal">
+            <span>02</span>
+            <h2>Açıq hava üçün</h2>
+            <p>Terras, bağ və balkon üçün düşünülmüş funksional seçimlər.</p>
+        </article>
+        <article class="reveal">
+            <span>03</span>
+            <h2>Bir toxunuşla əlaqə</h2>
+            <p>Bəyəndiyiniz məhsul üçün WhatsApp və ya telefonla dərhal sorğu.</p>
+        </article>
+    </div>
+</section>
