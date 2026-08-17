@@ -27,9 +27,60 @@ NO plants or props competing with the product.
 
 ---
 
-## 2. Codex agentinə tapşırıq
+## 2. ChatGPT ilə (TÖVSİYƏ OLUNAN YOL — API açarı lazım deyil)
 
-Bunu bütöv kopyalayıb Codex-ə verin. Repo kökündə işləməlidir.
+Abunəlik şəkil generasiyasını ChatGPT tətbiqində verir. Aşağıdaki bloku **bir dəfə** yapışdırın,
+sonra sadəcə "sonrakı" yazın — üslub bütün 15 şəkildə eyni qalsın deyə belə qurulub.
+
+```
+Mən açıq hava mebeli kataloqu üçün 15 məhsul şəkli hazırlayıram. Şəkilləri BİR-BİR
+generasiya edəcəksən: mən "sonrakı" yazdıqca siyahıdan növbətini çəkirsən.
+
+Hər şəkil üçün eyni üslub blokunu tətbiq et (üslub dəyişməməlidir, kataloq bir bütöv
+görünməlidir):
+
+Professional e-commerce product photograph. Single product, centered, three-quarter view
+from slightly above eye level. Clean sunlit outdoor terrace setting: smooth light warm-grey
+concrete floor, softly blurred neutral background, no walls or furniture behind. Bright
+natural daylight from the upper left, soft realistic contact shadow under the product. Sharp
+focus on the whole product, generous empty margin around it. 4:3 landscape framing.
+NO people, NO text, NO logos, NO watermarks, NO price tags, NO collage, NO multiple angles.
+
+SİYAHI:
+1. A white stackable plastic sun lounger with a ribbed seat and integrated wheels at one end, adjustable backrest raised to a reclined position, smooth matte white polypropylene.
+2. An anthracite dark-grey stackable plastic sun lounger, ribbed seat surface, adjustable backrest raised, matte charcoal polypropylene finish.
+3. A folding sun lounger made of oiled acacia hardwood slats with a five-position adjustable backrest and two small wooden wheels at the foot end, warm honey-brown wood grain visible.
+4. A modern sun lounger with a slim silver anodised aluminium frame and beige textilene mesh fabric seat, low profile, black frame accents, mesh weave texture visible.
+5. A premium sun lounger with a brushed aluminium frame and a thick cream-white quilted cushion with piped edges, small matching headrest pillow.
+6. A three-seat public park bench: black cast-iron ornate side frames and legs, seat and backrest made of five thick pine wood slats stained warm brown, bolt holes visible in the feet.
+7. A two-seat garden bench in solid acacia wood, slatted seat and vertical-slat backrest, rounded armrests, natural warm wood tone, simple clean joinery.
+8. An A-frame wooden picnic table set where the table and two bench seats form one single connected unit, light pine wood with visible grain, sturdy angled legs.
+9. A round white plastic garden table, 80 cm diameter, textured tabletop with a small centre hole for a parasol closed with a plug, three tapered legs, matte polypropylene.
+10. A rectangular outdoor dining table with a light grey HPL tabletop and slim brushed aluminium legs, clean minimal design, 150 by 90 cm proportions.
+11. A small folding balcony table in pine wood with a metal hook bracket for mounting on a railing, shown unfolded, compact square top.
+12. A large round garden parasol, 3 metre canopy in light sand-beige polyester, silver aluminium pole with a visible tilt joint below the canopy, canopy fully open, no base.
+13. A half-round wall-mounted awning parasol in beige polyester, semicircular canopy open, slim aluminium ribs and wall bracket visible.
+14. A white stackable garden chair in matte polypropylene with a slatted backrest and slightly curved seat, tapered legs with grey plastic floor tips.
+15. A cafe terrace chair with a slim aluminium frame fully wrapped in cappuccino-beige synthetic rattan weave, curved backrest, no cushion, tight even weave texture.
+
+Birinci şəkli indi çək.
+```
+
+Şəkilləri **siyahı sırası ilə** yükləyin və hamısını bir qovluğa atın. Adını dəyişməyə ehtiyac
+YOXDUR — yükləyici sıra rejimində işləyə bilir:
+
+```bash
+python3 ops/upload-images.py sekiller --order --yes
+```
+
+Sıra rejimi faylları yaranma vaxtına görə düzür və yuxarıdaki 1–15 siyahısına uyğunlaşdırır.
+Şəkli yenidən çəkib əvəz etmisinizsə sıra pozula bilər — o halda faylı SKU adı ilə saxlayın
+və rejimsiz işlədin (bax 3-cü bölmə).
+
+## 2b. Codex/API ilə (yalnız API açarınız varsa)
+
+ChatGPT abunəliyi API-yə şamil olunmur — bu yol ayrıca ödənişli açar tələb edir. Açar yoxdursa
+yuxarıdaki yolu işlədin.
 
 ```
 Bu repoda (QrCatalog) 15 demo məhsul üçün şəkil hazırlamalısan.
