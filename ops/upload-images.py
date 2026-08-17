@@ -165,8 +165,11 @@ def main():
         if order_map is not None:
             key = order_map[name]
         else:
-            stem = os.path.splitext(name)[0]
-            key = re.sub(r"-\d+$", "", stem).upper()  # SZ-BH-AG-2 → SZ-BH-AG
+            # SKU-nun ÖZÜ rəqəmlə bitə bilər (MS-BG-180, SL-AS-120), "ikinci şəkil"
+            # qaydası isə sonda -2 gözləyir. Ona görə əvvəlcə tam ad yoxlanılır;
+            # yalnız uyğun gəlməyəndə sondaki nömrə kəsilir (SZ-AK-KL-2 → SZ-AK-KL).
+            stem = os.path.splitext(name)[0].upper()
+            key = stem if stem in by_sku else re.sub(r"-\d+$", "", stem)
         product = by_sku.get(key)
         if product is None:
             skipped.append((name, f"SKU tapılmadı: {key}"))
