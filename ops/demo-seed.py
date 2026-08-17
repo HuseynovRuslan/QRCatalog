@@ -349,19 +349,56 @@ def seed(client):
     codes.append(category_code["humanCode"])
     print(f"  {len(codes)} kod: {', '.join(codes[:6])}…")
 
-    print("Obyektlər (xəritə)…")
+    print("Obyektlər və fiziki vahidlər…")
+    # Səpələnmə radiusu obyektin xarakterinə görə: park geniş, kafe terrası kiçik
+    spread_by_kind = {
+        "Park": 140, "Beach": 180, "Residential": 120, "Hotel": 90,
+        "Cafe": 35, "School": 50, "Other": 100,
+    }
     installed = 0
+    site_ids = {}
     for name, kind, address, lat, lng, contact, phone, lines in SITES:
         site = client.send("POST", "/api/admin/sites", {
             "name": name, "kind": kind, "latitude": lat, "longitude": lng,
             "address": address, "contactName": contact, "contactPhone": phone, "note": None,
         })
-        items = [{"productId": product_ids[sku], "quantity": qty, "installedOn": None}
-                 for sku, qty in lines if sku in product_ids]
-        client.send("PUT", f"/api/admin/sites/{site['id']}/items", {"items": items})
-        installed += sum(qty for _sku, qty in lines)
-        print(f"  {name} — {sum(q for _s, q in lines)} ədəd")
-    print(f"  {len(SITES)} obyekt, {installed} ədəd quraşdırılmış məhsul")
+        site_ids[name] = site["id"]
+        for sku, quantity in lines:
+            if sku not in product_ids:
+                continue
+            # Quraşdırma tarixi obyektə görə dəyişir — zəmanət hesabı realdır
+            installed_on = f"202{random.choice('456')}-{random.randint(3, 10):02d}-{random.randint(1, 28):02d}"
+            client.send("POST", "/api/admin/units/bulk", {
+                "productId": product_ids[sku],
+                "siteId": site["id"],
+                "quantity": quantity,
+                "installedOn": installed_on,
+                "note": None,
+                "spreadMeters": spread_by_kind.get(kind, 100),
+            })
+            installed += quantity
+        print(f"  {name} — {sum(q for _s, q in lines)} vahid")
+
+    # Anbar qalığı + bir neçə təmir/çıxarılmış nüsxə: panel bütün statusları göstərsin
+    for sku, quantity in [("SZ-AK-KL", 8), ("SK-PR-3N", 5), ("ST-AK-QT", 12)]:
+        client.send("POST", "/api/admin/units/bulk", {
+            "productId": product_ids[sku], "siteId": None, "quantity": quantity,
+            "installedOn": None, "note": None,
+        })
+    units = client.get("/api/admin/units")
+    for unit, status, note in [
+        (units[0], "InRepair", "Arxalıq lövhəsi dəyişdirilir"),
+        (units[1], "Removed", "Vandalizm — akt tərtib olundu"),
+    ]:
+        client.send("PUT", f"/api/admin/units/{unit['id']}", {
+            "siteId": unit["siteId"],
+            "latitude": unit["latitude"] if unit["hasOwnPosition"] else None,
+            "longitude": unit["longitude"] if unit["hasOwnPosition"] else None,
+            "installedOn": unit["installedOn"],
+            "status": status,
+            "note": note,
+        })
+    print(f"  {len(SITES)} obyekt, {installed} quraşdırılmış vahid, {len(units)} vahid cəmi")
 
     print("Müraciətlər…")
     slugs = {}
@@ -427,8 +464,10 @@ def summary(client):
     for row in dashboard["topProducts"]:
         print(f"    {row['count']:>4}  {row['name']}")
     sites = client.get("/api/admin/sites")
-    print(f"  obyekt: {len(sites)} "
-          f"({sum(site['totalQuantity'] for site in sites)} ədəd quraşdırılmış məhsul)")
+    units = client.get("/api/admin/units")
+    on_map = sum(1 for unit in units if unit["latitude"] is not None)
+    print(f"  obyekt: {len(sites)} ({sum(s['totalQuantity'] for s in sites)} quraşdırılmış vahid)")
+    print(f"  vahid: {len(units)} — xəritədə {on_map}, anbarda {len(units) - on_map}")
     print("\nŞəkilləri SKU adı ilə saxlayıb toplu yükləyin:")
     print("  " + ", ".join(f"{sku}.png" for _c, _n, sku, *_r in PRODUCTS[:4]) + " …")
     print("  python3 ops/upload-images.py <qovluq>")

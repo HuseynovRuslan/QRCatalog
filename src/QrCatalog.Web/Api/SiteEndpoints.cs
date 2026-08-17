@@ -8,8 +8,11 @@ namespace QrCatalog.Web.Api;
 
 /// <summary>
 /// Quraşdırılma obyektləri — məhsulların fiziki durduğu yerlər və xəritə nöqtələri.
-/// Obyekt SİLİNƏ BİLƏR (məhsuldan fərqli olaraq): səhv daxil edilmiş ünvan tarixi
-/// məlumat deyil, sadəcə səhvdir. Silinmə audit jurnalına düşür.
+/// Obyektdəki SAY ayrıca saxlanılmır, <see cref="SiteUnit"/> qeydlərindən hesablanır:
+/// eyni faktın iki mənbəyi bir gün mütləq ayrılır.
+///
+/// Obyekt SİLİNƏ BİLƏR (məhsuldan fərqli): səhv ünvan tarixi məlumat deyil. Nüsxələr
+/// silinmir — obyekt gedəndə onlar anbara qayıdır (FK SetNull).
 /// </summary>
 public static class SiteEndpoints
 {
@@ -26,10 +29,10 @@ public static class SiteEndpoints
                 query = query.Where(s =>
                     EF.Functions.ILike(s.Name, $"%{search}%") ||
                     (s.Address != null && EF.Functions.ILike(s.Address, $"%{search}%")));
-            // "Bu model harada quraşdırılıb" — məhsul səhifəsindəki xəritə bunu işlədir.
-            // Əks istiqamət (obyekt → məhsullar) siyahının özündə onsuz da var.
+            // "Bu model harada quraşdırılıb" — məhsul səhifəsindəki xəritə bunu işlədir
             if (productId is { } product)
-                query = query.Where(s => s.Items.Any(i => i.ProductId == product));
+                query = query.Where(s => db.SiteUnits.Any(u =>
+                    u.SiteId == s.Id && u.ProductId == product && u.Status != UnitStatus.Removed));
 
             var sites = await query
                 .OrderBy(s => s.Name)
@@ -38,33 +41,37 @@ public static class SiteEndpoints
                     s.Id, s.Name, Kind = s.Kind.ToString(), s.Address,
                     s.Latitude, s.Longitude, s.ContactName, s.ContactPhone, s.Note,
                     s.UpdatedAtUtc,
-                    Items = s.Items.Select(i => new { i.Id, i.ProductId, i.Quantity, i.InstalledOn })
-                        .ToList(),
                 })
                 .ToListAsync();
 
-            // Məhsul adları bir sorğu ilə — xəritə balonunda "3 × Park skamyası" yazılır
-            var productIds = sites.SelectMany(s => s.Items).Select(i => i.ProductId).Distinct().ToList();
-            var productNames = productIds.Count == 0
-                ? []
-                : await db.Products.AsNoTracking()
-                    .Where(p => productIds.Contains(p.Id))
-                    .Select(p => new
-                    {
-                        p.Id,
-                        Name = p.Translations.Where(t => t.Lang == DefaultLang)
-                            .Select(t => t.Name).FirstOrDefault() ?? "(adsız)",
-                    })
-                    .ToDictionaryAsync(p => p.Id, p => p.Name);
+            var siteIds = sites.Select(s => s.Id).ToList();
 
-            var items = sites.Select(s => new SiteDto(
-                s.Id, s.Name, s.Kind, s.Address, s.Latitude, s.Longitude,
-                s.ContactName, s.ContactPhone, s.Note, s.UpdatedAtUtc,
-                s.Items.Select(i => new SiteItemDto(
-                    i.Id, i.ProductId,
-                    productNames.GetValueOrDefault(i.ProductId, "(silinmiş məhsul)"),
-                    i.Quantity, i.InstalledOn)).ToList(),
-                s.Items.Sum(i => i.Quantity))).ToList();
+            // Model üzrə yığım — çıxarılmış nüsxələr sayılmır
+            var grouped = await db.SiteUnits.AsNoTracking()
+                .Where(u => u.SiteId != null && siteIds.Contains(u.SiteId!.Value) &&
+                            u.Status != UnitStatus.Removed)
+                .GroupBy(u => new { SiteId = u.SiteId!.Value, u.ProductId })
+                .Select(g => new { g.Key.SiteId, g.Key.ProductId, Count = g.Count() })
+                .ToListAsync();
+
+            var names = await ProductNamesAsync(db, grouped.Select(g => g.ProductId));
+
+            var items = sites.Select(s =>
+            {
+                var lines = grouped
+                    .Where(g => g.SiteId == s.Id)
+                    .OrderByDescending(g => g.Count)
+                    .Select(g => new SiteItemDto(
+                        g.ProductId,
+                        names.GetValueOrDefault(g.ProductId, "(silinmiş məhsul)"),
+                        g.Count))
+                    .ToList();
+
+                return new SiteDto(
+                    s.Id, s.Name, s.Kind, s.Address, s.Latitude, s.Longitude,
+                    s.ContactName, s.ContactPhone, s.Note, s.UpdatedAtUtc,
+                    lines, lines.Sum(l => l.Quantity));
+            }).ToList();
 
             return Results.Ok(items);
         })
@@ -117,53 +124,40 @@ public static class SiteEndpoints
         .RequireAuthorization(Policies.CanEdit)
         .RequireAntiforgery();
 
-        // Obyektdəki məhsul sətirləri tam əvəz olunur — sətir-sətir redaktə əvəzinə
-        // bütöv göndərmək UI-da sadədir və yarımçıq vəziyyət yaratmır
-        group.MapPut("/{id:guid}/items", async (
-            Guid id, ReplaceSiteItemsRequest request, AppDbContext db) =>
-        {
-            var site = await db.Sites.Include(s => s.Items).FirstOrDefaultAsync(s => s.Id == id);
-            if (site is null) return Results.NotFound();
-
-            var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
-            var known = await db.Products.Where(p => productIds.Contains(p.Id)).CountAsync();
-            if (known != productIds.Count)
-                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
-                    title: "Siyahıda tanınmayan məhsul var.");
-
-            try
-            {
-                var fresh = request.Items
-                    .Select(i => SiteItem.Create(site.Id, i.ProductId, i.Quantity, i.InstalledOn))
-                    .ToList();
-                db.RemoveRange(site.Items);
-                site.Items.Clear();
-                site.Items.AddRange(fresh);
-            }
-            catch (ArgumentException ex)
-            {
-                return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.Message);
-            }
-
-            site.Touch();
-            await db.SaveChangesAsync();
-            return Results.NoContent();
-        })
-        .RequireAuthorization(Policies.CanEdit)
-        .RequireAntiforgery();
-
         group.MapDelete("/{id:guid}", async (Guid id, AppDbContext db) =>
         {
-            var site = await db.Sites.Include(s => s.Items).FirstOrDefaultAsync(s => s.Id == id);
+            var site = await db.Sites.FirstOrDefaultAsync(s => s.Id == id);
             if (site is null) return Results.NotFound();
 
-            db.RemoveRange(site.Items);
+            // Nüsxələr silinmir — anbara qayıdır. Fiziki skamya obyekt qeydi
+            // silinəndə yoxa çıxmır, ona görə tarixçəni saxlayırıq.
+            var units = await db.SiteUnits.Where(u => u.SiteId == id).ToListAsync();
+            foreach (var unit in units)
+                unit.Place(null, null, null, unit.InstalledOn);
+
             db.Sites.Remove(site);
             await db.SaveChangesAsync();
-            return Results.NoContent();
+            return Results.Ok(new { returnedToStock = units.Count });
         })
         .RequireAuthorization(Policies.CanManage)
         .RequireAntiforgery();
+    }
+
+    internal static async Task<Dictionary<Guid, string>> ProductNamesAsync(
+        AppDbContext db, IEnumerable<Guid> productIds)
+    {
+        var ids = productIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        return await db.Products.AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .Select(p => new
+            {
+                p.Id,
+                Name = p.Translations.Where(t => t.Lang == DefaultLang)
+                    .Select(t => t.Name).FirstOrDefault() ?? "(adsız)",
+            })
+            .ToDictionaryAsync(p => p.Id, p => p.Name);
     }
 
     private static SiteKind ParseKind(string? kind) =>
@@ -174,12 +168,8 @@ public sealed record SaveSiteRequest(
     string Name, string? Kind, double Latitude, double Longitude,
     string? Address, string? ContactName, string? ContactPhone, string? Note);
 
-public sealed record SiteItemInput(Guid ProductId, int Quantity, DateOnly? InstalledOn);
-
-public sealed record ReplaceSiteItemsRequest(List<SiteItemInput> Items);
-
-public sealed record SiteItemDto(
-    Guid Id, Guid ProductId, string ProductName, int Quantity, DateOnly? InstalledOn);
+/// <summary>Obyektdə bir modelin yığımı — nüsxə qeydlərindən hesablanır.</summary>
+public sealed record SiteItemDto(Guid ProductId, string ProductName, int Quantity);
 
 public sealed record SiteDto(
     Guid Id, string Name, string Kind, string? Address, double Latitude, double Longitude,

@@ -46,8 +46,6 @@ public sealed class Site : ITenantOwned
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
 
-    public List<SiteItem> Items { get; private set; } = [];
-
     public static Site Create(
         Guid companyId, string name, SiteKind kind, double latitude, double longitude,
         string? address = null, string? contactName = null, string? contactPhone = null,
@@ -98,35 +96,7 @@ public sealed class Site : ITenantOwned
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
-/// <summary>
-/// Obyektdə quraşdırılmış məhsul: hansı model, neçə ədəd, nə vaxt. Məhsul silinmədiyi
-/// (yalnız arxivləşdiyi) üçün köhnə obyekt qeydi həmişə oxunaqlı qalır.
-/// </summary>
-public sealed class SiteItem
-{
-    private SiteItem() { } // EF Core
-
-    public Guid Id { get; private set; }
-    public Guid SiteId { get; private set; }
-    public Guid ProductId { get; private set; }
-
-    public int Quantity { get; private set; }
-
-    /// <summary>Quraşdırma tarixi — zəmanət hesabı buradan gedir.</summary>
-    public DateOnly? InstalledOn { get; private set; }
-
-    public static SiteItem Create(Guid siteId, Guid productId, int quantity, DateOnly? installedOn)
-    {
-        if (quantity is < 1 or > 100_000)
-            throw new ArgumentException("Ədəd 1 ilə 100000 arasında olmalıdır.", nameof(quantity));
-
-        return new SiteItem
-        {
-            Id = Guid.NewGuid(),
-            SiteId = siteId,
-            ProductId = productId,
-            Quantity = quantity,
-            InstalledOn = installedOn,
-        };
-    }
-}
+// QEYD: əvvəl burada `SiteItem` var idi — obyektdə modelin SAYINI saxlayırdı
+// ("bu parkda 24 skamya"). O, <see cref="SiteUnit"/> ilə əvəz olundu: hər fiziki nüsxə
+// öz qeydi və öz koordinatı ilə. Say indi vahidlərdən HESABLANIR — eyni faktı iki yerdə
+// saxlamaq onların bir gün ayrılması ilə bitir.

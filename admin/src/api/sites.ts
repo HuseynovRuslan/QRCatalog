@@ -10,12 +10,11 @@ export type SiteKind =
   | 'Beach'
   | 'Other'
 
+/** Obyektdə bir modelin yığımı — nüsxə (vahid) qeydlərindən hesablanır. */
 export interface SiteItem {
-  id: string
   productId: string
   productName: string
   quantity: number
-  installedOn: string | null
 }
 
 export interface Site {
@@ -99,21 +98,5 @@ export function useUpdateSite() {
 export function useDeleteSite() {
   return useInvalidating((id: string) =>
     api<void>(`/api/admin/sites/${id}`, { method: 'DELETE' }),
-  )
-}
-
-export function useReplaceSiteItems() {
-  return useInvalidating(
-    ({
-      id,
-      items,
-    }: {
-      id: string
-      items: { productId: string; quantity: number; installedOn: string | null }[]
-    }) =>
-      api<void>(`/api/admin/sites/${id}/items`, {
-        method: 'PUT',
-        body: JSON.stringify({ items }),
-      }),
   )
 }

@@ -1,17 +1,27 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import SiteMap from '../components/SiteMap'
+import { Link } from 'react-router-dom'
+import PointMap, { type MapPoint } from '../components/PointMap'
 import { useProducts } from '../api/products'
 import {
   SITE_KINDS,
   useCreateSite,
   useDeleteSite,
-  useReplaceSiteItems,
   useSites,
   useUpdateSite,
   type SaveSite,
   type Site,
   type SiteKind,
 } from '../api/sites'
+
+const KIND_COLOR: Record<SiteKind, string> = {
+  Park: '#15803d',
+  Hotel: '#1d4ed8',
+  Cafe: '#b45309',
+  School: '#7e22ce',
+  Residential: '#0f766e',
+  Beach: '#0284c7',
+  Other: '#57534e',
+}
 
 const EMPTY: SaveSite & { id?: string } = {
   name: '',
@@ -24,38 +34,45 @@ const EMPTY: SaveSite & { id?: string } = {
   note: null,
 }
 
-interface ItemRow {
-  productId: string
-  quantity: number
-  installedOn: string | null
-}
-
 export default function Sites() {
   const [search, setSearch] = useState('')
   const [productFilter, setProductFilter] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [form, setForm] = useState<(SaveSite & { id?: string }) | null>(null)
-  const [rows, setRows] = useState<ItemRow[]>([])
 
   const sites = useSites(search, productFilter)
   const products = useProducts('', '', '', 1)
   const create = useCreateSite()
   const update = useUpdateSite()
   const remove = useDeleteSite()
-  const replaceItems = useReplaceSiteItems()
 
   const productOptions = products.data?.items ?? []
-  const totals = useMemo(() => {
-    const list = sites.data ?? []
-    return {
-      sites: list.length,
-      units: list.reduce((sum, s) => sum + s.totalQuantity, 0),
-    }
-  }, [sites.data])
+  const rows = sites.data ?? []
+
+  const points = useMemo<MapPoint[]>(
+    () =>
+      rows.map(site => ({
+        id: site.id,
+        lat: site.latitude,
+        lng: site.longitude,
+        title: site.name,
+        lines: [
+          site.address ?? '',
+          ...site.items.map(item => `${item.quantity} × ${item.productName}`),
+          site.items.length === 0 ? 'vahid qeydə alınmayıb' : '',
+        ],
+        color: KIND_COLOR[site.kind] ?? KIND_COLOR.Other,
+      })),
+    [rows],
+  )
+
+  const totals = {
+    sites: rows.length,
+    units: rows.reduce((sum, site) => sum + site.totalQuantity, 0),
+  }
 
   function startCreate() {
     setForm({ ...EMPTY })
-    setRows([])
     setSelectedId(null)
   }
 
@@ -71,13 +88,6 @@ export default function Sites() {
       contactPhone: site.contactPhone,
       note: site.note,
     })
-    setRows(
-      site.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        installedOn: item.installedOn,
-      })),
-    )
     setSelectedId(site.id)
   }
 
@@ -96,18 +106,13 @@ export default function Sites() {
       note: form.note,
     }
 
-    const id = form.id ?? (await create.mutateAsync(payload)).id
-    if (form.id) await update.mutateAsync({ id, ...payload })
-
-    const clean = rows.filter(row => row.productId && row.quantity > 0)
-    await replaceItems.mutateAsync({ id, items: clean })
+    if (form.id) await update.mutateAsync({ id: form.id, ...payload })
+    else await create.mutateAsync(payload)
 
     setForm(null)
-    setRows([])
-    setSelectedId(id)
   }
 
-  const busy = create.isPending || update.isPending || replaceItems.isPending
+  const busy = create.isPending || update.isPending
 
   return (
     <div>
@@ -115,7 +120,7 @@ export default function Sites() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Obyektlər</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Məhsulların quraşdırıldığı yerlər. {totals.sites} obyekt, {totals.units} ədəd məhsul.
+            Məhsulların quraşdırıldığı yerlər. {totals.sites} obyekt, {totals.units} vahid.
           </p>
         </div>
         <button
@@ -134,7 +139,7 @@ export default function Sites() {
           placeholder="Ad və ya ünvan üzrə axtar"
           className="w-full max-w-sm rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
         />
-        {/* Model üzrə süzgəc: "bu şezlonq harada var" sualına xəritədə cavab verir */}
+        {/* Model üzrə süzgəc: "bu model harada var" sualına xəritədə cavab verir */}
         <select
           value={productFilter}
           onChange={e => setProductFilter(e.target.value)}
@@ -150,14 +155,12 @@ export default function Sites() {
       </div>
 
       <div className="mt-4">
-        <SiteMap
-          sites={sites.data ?? []}
+        <PointMap
+          points={points}
           selectedId={selectedId}
           onSelect={setSelectedId}
           onPick={
-            form
-              ? (lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })
-              : undefined
+            form ? (lat, lng) => setForm({ ...form, latitude: lat, longitude: lng }) : undefined
           }
           draft={form ? { lat: form.latitude, lng: form.longitude } : null}
         />
@@ -166,13 +169,17 @@ export default function Sites() {
             Mövqeyi dəyişmək üçün xəritəyə klikləyin — qırmızı nöqtə seçilmiş yerdir.
           </p>
         )}
+        <p className="mt-2 text-sm text-stone-500">
+          Buradaki nöqtə obyektin özüdür. Ayrı-ayrı skamya və şezlonqların dəqiq yeri{' '}
+          <Link to="/vahidler" className="text-emerald-800 hover:underline">
+            Vahidlər
+          </Link>{' '}
+          səhifəsindədir.
+        </p>
       </div>
 
       {form && (
-        <form
-          onSubmit={onSubmit}
-          className="mt-4 rounded-lg border border-stone-200 bg-white p-4"
-        >
+        <form onSubmit={onSubmit} className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
           <h2 className="text-base font-semibold">
             {form.id ? 'Obyekti redaktə et' : 'Yeni obyekt'}
           </h2>
@@ -269,67 +276,6 @@ export default function Sites() {
             </label>
           </div>
 
-          <h3 className="mt-5 text-sm font-semibold text-stone-700">Quraşdırılmış məhsullar</h3>
-          <div className="mt-2 space-y-2">
-            {rows.map((row, index) => (
-              <div key={index} className="flex flex-wrap items-center gap-2">
-                <select
-                  value={row.productId}
-                  onChange={e => {
-                    const next = [...rows]
-                    next[index] = { ...row, productId: e.target.value }
-                    setRows(next)
-                  }}
-                  className="min-w-56 flex-1 rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
-                >
-                  <option value="">— məhsul seç —</option>
-                  {productOptions.map(product => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  value={row.quantity}
-                  onChange={e => {
-                    const next = [...rows]
-                    next[index] = { ...row, quantity: Number(e.target.value) }
-                    setRows(next)
-                  }}
-                  className="w-24 rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
-                  aria-label="Ədəd"
-                />
-                <input
-                  type="date"
-                  value={row.installedOn ?? ''}
-                  onChange={e => {
-                    const next = [...rows]
-                    next[index] = { ...row, installedOn: e.target.value || null }
-                    setRows(next)
-                  }}
-                  className="rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
-                  aria-label="Quraşdırma tarixi"
-                />
-                <button
-                  type="button"
-                  onClick={() => setRows(rows.filter((_, i) => i !== index))}
-                  className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
-                >
-                  Sil
-                </button>
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setRows([...rows, { productId: '', quantity: 1, installedOn: null }])}
-            className="mt-2 rounded border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50"
-          >
-            Məhsul sətri əlavə et
-          </button>
-
           <div className="mt-5 flex gap-2">
             <button
               type="submit"
@@ -340,18 +286,15 @@ export default function Sites() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setForm(null)
-                setRows([])
-              }}
+              onClick={() => setForm(null)}
               className="rounded border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50"
             >
               Ləğv et
             </button>
           </div>
-          {(create.isError || update.isError || replaceItems.isError) && (
+          {(create.isError || update.isError) && (
             <p className="mt-2 text-sm text-red-700">
-              {((create.error ?? update.error ?? replaceItems.error) as Error).message}
+              {((create.error ?? update.error) as Error).message}
             </p>
           )}
         </form>
@@ -363,13 +306,13 @@ export default function Sites() {
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
               <th className="px-3 py-2">Obyekt</th>
               <th className="px-3 py-2">Növ</th>
-              <th className="px-3 py-2">Məhsullar</th>
+              <th className="px-3 py-2">Vahidlər</th>
               <th className="px-3 py-2">Əlaqə</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody>
-            {sites.data?.map(site => (
+            {rows.map(site => (
               <tr
                 key={site.id}
                 onClick={() => setSelectedId(site.id)}
@@ -391,7 +334,7 @@ export default function Sites() {
                     <span className="text-stone-400">—</span>
                   ) : (
                     <span>
-                      {site.totalQuantity} ədəd
+                      {site.totalQuantity} vahid
                       <span className="block text-xs text-stone-400">
                         {site.items.map(i => `${i.quantity} × ${i.productName}`).join(', ')}
                       </span>
@@ -405,6 +348,13 @@ export default function Sites() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <Link
+                    to={`/vahidler?obyekt=${site.id}`}
+                    onClick={event => event.stopPropagation()}
+                    className="rounded px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-50"
+                  >
+                    Vahidlər
+                  </Link>
                   <button
                     type="button"
                     onClick={event => {
@@ -419,7 +369,12 @@ export default function Sites() {
                     type="button"
                     onClick={event => {
                       event.stopPropagation()
-                      if (confirm(`«${site.name}» silinsin?`)) remove.mutate(site.id)
+                      if (
+                        confirm(
+                          `«${site.name}» silinsin? Vahidlər silinmir — anbara qaytarılır.`,
+                        )
+                      )
+                        remove.mutate(site.id)
                     }}
                     className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
                   >
@@ -428,7 +383,7 @@ export default function Sites() {
                 </td>
               </tr>
             ))}
-            {sites.data?.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-stone-400">
                   Obyekt yoxdur. «Yeni obyekt» ilə başlayın.

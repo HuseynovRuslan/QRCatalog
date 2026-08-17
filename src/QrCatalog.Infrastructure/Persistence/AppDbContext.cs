@@ -25,6 +25,7 @@ public sealed class AppDbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
     public DbSet<Site> Sites => Set<Site>();
+    public DbSet<SiteUnit> SiteUnits => Set<SiteUnit>();
     public DbSet<ScanEvent> ScanEvents => Set<ScanEvent>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
@@ -190,21 +191,35 @@ public sealed class AppDbContext
                 .HasForeignKey(s => s.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            b.HasMany(s => s.Items)
-                .WithOne()
-                .HasForeignKey(i => i.SiteId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<SiteItem>(b =>
+        modelBuilder.Entity<SiteUnit>(b =>
         {
-            b.HasIndex(i => new { i.SiteId, i.ProductId });
+            b.Property(u => u.Code).HasMaxLength(60).IsRequired();
+            b.Property(u => u.Note).HasMaxLength(2000);
 
-            // Obyektdə işlənən məhsul silinə bilməz — məhsul onsuz da silinmir,
-            // arxivləşir; Restrict bu qaydanı bazada da təsbit edir.
+            // Nüsxə kodu müəssisə daxilində unikaldır — xidmət zəngində "SK-PR-3N/007"
+            // deyəndə iki nəticə çıxmamalıdır
+            b.HasIndex(u => new { u.CompanyId, u.Code }).IsUnique();
+            b.HasIndex(u => new { u.CompanyId, u.ProductId });
+            b.HasIndex(u => u.SiteId);
+
+            b.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(u => u.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Obyekt silinəndə nüsxələr anbara qayıdır (SetNull), silinmir:
+            // fiziki skamya obyekt qeydi silinəndə yoxa çıxmır.
+            b.HasOne<Site>()
+                .WithMany()
+                .HasForeignKey(u => u.SiteId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Nüsxəsi olan məhsul silinə bilməz — məhsul onsuz da yalnız arxivləşir
             b.HasOne<Product>()
                 .WithMany()
-                .HasForeignKey(i => i.ProductId)
+                .HasForeignKey(u => u.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

@@ -1,39 +1,44 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { Site, SiteKind } from '../api/sites'
 
 /* Marker kimi circleMarker işlədilir, L.marker YOX: standart Leaflet marker-i PNG ikon
    faylını CSS-ə nisbi yoldan yükləyir və bundler-də bu yol pozulur (klassik "marker
    görünmür" problemi). circleMarker SVG-dir — nə əlavə fayl, nə şəkil sorğusu lazımdır.
-   Tile-lar üçün CSP-də img-src icazəsi var (SecurityHeadersMiddleware). */
+   Tile-lar üçün CSP-də img-src icazəsi var (SecurityHeadersMiddleware).
 
-const KIND_COLOR: Record<SiteKind, string> = {
-  Park: '#15803d',
-  Hotel: '#1d4ed8',
-  Cafe: '#b45309',
-  School: '#7e22ce',
-  Residential: '#0f766e',
-  Beach: '#0284c7',
-  Other: '#57534e',
+   Komponent həm obyektləri, həm ayrı-ayrı nüsxələri göstərir — nöqtə mənbəyindən
+   asılı olmayan ümumi interfeys, iki ayrı xəritə komponenti saxlamamaq üçün. */
+
+export interface MapPoint {
+  id: string
+  lat: number
+  lng: number
+  /** Balonun başlığı — obyekt adı, ya nüsxə kodu. */
+  title: string
+  /** Balonda alt sətirlər. */
+  lines?: string[]
+  color: string
+  /** Nüsxələr obyektlərdən kiçik göstərilir. */
+  radius?: number
 }
 
-// Azərbaycanın mərkəzi — obyekt yoxdursa xəritə buradan açılır
+// Azərbaycanın mərkəzi — nöqtə yoxdursa xəritə buradan açılır
 const FALLBACK: L.LatLngTuple = [40.3, 47.9]
 
 interface Props {
-  sites: Site[]
+  points: MapPoint[]
   selectedId?: string | null
   onSelect?: (id: string) => void
   /** Verilirsə xəritəyə klik koordinat qaytarır (formada mövqe seçmək üçün). */
   onPick?: (lat: number, lng: number) => void
-  /** Formada seçilmiş, hələ saxlanmamış nöqtə. */
+  /** Hələ saxlanmamış nöqtə (forma). */
   draft?: { lat: number; lng: number } | null
   className?: string
 }
 
-export default function SiteMap({
-  sites,
+export default function PointMap({
+  points,
   selectedId,
   onSelect,
   onPick,
@@ -45,7 +50,9 @@ export default function SiteMap({
   const markers = useRef<Map<string, L.CircleMarker>>(new Map())
   const draftMarker = useRef<L.CircleMarker | null>(null)
   const pick = useRef(onPick)
+  const select = useRef(onSelect)
   pick.current = onPick
+  select.current = onSelect
 
   // Xəritə bir dəfə qurulur; React yenidən render olanda təzələnmir
   useEffect(() => {
@@ -66,7 +73,6 @@ export default function SiteMap({
     }
   }, [])
 
-  // Obyektlər dəyişəndə markerlər yenidən qurulur
   useEffect(() => {
     const instance = map.current
     if (!instance) return
@@ -74,35 +80,31 @@ export default function SiteMap({
     markers.current.forEach(marker => marker.remove())
     markers.current.clear()
 
-    sites.forEach(site => {
-      const marker = L.circleMarker([site.latitude, site.longitude], {
-        radius: 9,
+    points.forEach(point => {
+      const marker = L.circleMarker([point.lat, point.lng], {
+        radius: point.radius ?? 9,
         weight: 2,
         color: '#ffffff',
-        fillColor: KIND_COLOR[site.kind] ?? KIND_COLOR.Other,
+        fillColor: point.color,
         fillOpacity: 0.95,
       })
 
-      const lines = site.items
-        .map(item => `${item.quantity} × ${escapeHtml(item.productName)}`)
-        .join('<br>')
+      const body = (point.lines ?? []).filter(Boolean).map(escapeHtml).join('<br>')
       marker.bindPopup(
-        `<strong>${escapeHtml(site.name)}</strong>` +
-          (site.address ? `<br><span style="color:#78716c">${escapeHtml(site.address)}</span>` : '') +
-          (lines ? `<br><br>${lines}` : '<br><br><em>məhsul əlavə olunmayıb</em>'),
+        `<strong>${escapeHtml(point.title)}</strong>` + (body ? `<br>${body}` : ''),
       )
-      marker.on('click', () => onSelect?.(site.id))
+      marker.on('click', () => select.current?.(point.id))
       marker.addTo(instance)
-      markers.current.set(site.id, marker)
+      markers.current.set(point.id, marker)
     })
 
-    if (sites.length > 0) {
+    if (points.length > 0) {
       instance.fitBounds(
-        L.latLngBounds(sites.map(s => [s.latitude, s.longitude] as L.LatLngTuple)),
-        { padding: [40, 40], maxZoom: 13 },
+        L.latLngBounds(points.map(p => [p.lat, p.lng] as L.LatLngTuple)),
+        { padding: [40, 40], maxZoom: 16 },
       )
     }
-  }, [sites, onSelect])
+  }, [points])
 
   // Siyahıdan seçim — markeri açır və mərkəzə gətirir
   useEffect(() => {
@@ -114,7 +116,6 @@ export default function SiteMap({
     }
   }, [selectedId])
 
-  // Formadaki hələ saxlanmamış nöqtə
   useEffect(() => {
     const instance = map.current
     if (!instance) return
@@ -137,7 +138,7 @@ export default function SiteMap({
       ref={container}
       className={className ?? 'h-96 w-full rounded-lg border border-stone-200'}
       role="application"
-      aria-label="Obyekt xəritəsi"
+      aria-label="Xəritə"
     />
   )
 }

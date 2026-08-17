@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCategories } from '../api/categories'
 import {
   useCreateProduct,
@@ -14,8 +14,8 @@ import {
   type SpecItem,
 } from '../api/products'
 import { useCreateQrCode, useQrCodesForTarget, useSheetDownload } from '../api/qrcodes'
-import { useSitesForProduct } from '../api/sites'
-import SiteMap from '../components/SiteMap'
+import { UNIT_STATUSES, useUnits } from '../api/units'
+import PointMap from '../components/PointMap'
 
 /* ── spesifikasiya redaktoru ───────────────────────── */
 
@@ -95,57 +95,70 @@ function SpecsEditor({ productId, initial }: { productId: string; initial: SpecI
    Xəritə + siyahı: hansı parkda, hoteldə, neçə ədəd. Satışdan sonra zəng gələndə
    ("bizdəki skamyalardan biri sınıb") cavab burada bir baxışda görünür. */
 function SitesPanel({ productId }: { productId: string }) {
-  const sites = useSitesForProduct(productId)
+  const units = useUnits({ productId })
   const [focused, setFocused] = useState<string | null>(null)
 
-  const rows = sites.data ?? []
-  const total = rows.reduce(
-    (sum, site) =>
-      sum + site.items.filter(i => i.productId === productId).reduce((n, i) => n + i.quantity, 0),
-    0,
-  )
+  const rows = units.data ?? []
+  const placed = rows.filter(u => u.latitude !== null && u.longitude !== null)
+
+  // Hər NÜSXƏ ayrı nöqtədir — "24 skamya var" deyil, "bu skamya buradadır"
+  const points = placed.map(unit => ({
+    id: unit.id,
+    lat: unit.latitude!,
+    lng: unit.longitude!,
+    title: unit.code,
+    lines: [
+      unit.siteName ?? 'anbarda',
+      UNIT_STATUSES.find(s => s.value === unit.status)?.label ?? unit.status,
+      unit.installedOn ? `quraşdırılıb: ${unit.installedOn}` : '',
+    ],
+    color: UNIT_STATUSES.find(s => s.value === unit.status)?.color ?? '#57534e',
+    radius: 6,
+  }))
+
+  // Obyekt üzrə yığım — siyahı qısa qalsın, nöqtələr isə fərdi
+  const bySite = new Map<string, { name: string; count: number }>()
+  rows.forEach(unit => {
+    const key = unit.siteId ?? 'stock'
+    const name = unit.siteName ?? 'Anbarda'
+    bySite.set(key, { name, count: (bySite.get(key)?.count ?? 0) + 1 })
+  })
 
   return (
     <section className="mt-8">
-      <h2 className="text-base font-semibold">Quraşdırıldığı yerlər</h2>
+      <h2 className="text-base font-semibold">Hər nüsxə harada</h2>
       <p className="mt-1 text-sm text-stone-500">
         {rows.length === 0
-          ? 'Bu model hələ heç bir obyektdə qeydə alınmayıb.'
-          : `${rows.length} obyekt, ${total} ədəd.`}
+          ? 'Bu modelin hələ qeydə alınmış nüsxəsi yoxdur.'
+          : `${rows.length} vahid, ${bySite.size} yer. Xəritədə hər nöqtə bir nüsxədir.`}
       </p>
 
       {rows.length > 0 && (
         <>
-          <div className="mt-3">
-            <SiteMap
-              sites={rows}
-              selectedId={focused}
-              onSelect={setFocused}
-              className="h-72 w-full rounded-lg border border-stone-200"
-            />
-          </div>
+          {points.length > 0 && (
+            <div className="mt-3">
+              <PointMap
+                points={points}
+                selectedId={focused}
+                onSelect={setFocused}
+                className="h-72 w-full rounded-lg border border-stone-200"
+              />
+            </div>
+          )}
           <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white">
-            {rows.map(site => {
-              const quantity = site.items
-                .filter(i => i.productId === productId)
-                .reduce((n, i) => n + i.quantity, 0)
-              return (
-                <li
-                  key={site.id}
-                  onClick={() => setFocused(site.id)}
-                  className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-stone-50 ${
-                    focused === site.id ? 'bg-emerald-50/60' : ''
-                  }`}
-                >
-                  <span className="font-medium">{site.name}</span>
-                  {site.address && (
-                    <span className="text-xs text-stone-400">{site.address}</span>
-                  )}
-                  <span className="ml-auto font-medium tabular-nums">{quantity} ədəd</span>
-                </li>
-              )
-            })}
+            {[...bySite.entries()].map(([key, entry]) => (
+              <li key={key} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="font-medium">{entry.name}</span>
+                <span className="ml-auto tabular-nums">{entry.count} vahid</span>
+              </li>
+            ))}
           </ul>
+          <Link
+            to={`/vahidler?model=${productId}`}
+            className="mt-3 inline-block text-sm text-emerald-800 hover:underline"
+          >
+            Nüsxələri ayrı-ayrı idarə et →
+          </Link>
         </>
       )}
     </section>

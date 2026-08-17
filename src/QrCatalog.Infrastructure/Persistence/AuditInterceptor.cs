@@ -28,7 +28,7 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
     [
         typeof(Product), typeof(ProductTranslation), typeof(ProductSpec), typeof(ProductImage),
         typeof(Category), typeof(QrCode), typeof(Company), typeof(Inquiry),
-        typeof(Site), typeof(SiteItem),
+        typeof(Site), typeof(SiteUnit),
     ];
 
     private readonly ICurrentUser? _currentUser;
