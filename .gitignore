@@ -497,3 +497,6 @@ src/QrCatalog.Web/uploads/
 
 # Məhsul şəkilləri — repoya düşmür, storage-a yüklənir (bax ops/sekil-promptlari.md)
 sekiller/
+
+# Muveqqeti ekran sekli aleti
+tests/e2e/shot.mjs
