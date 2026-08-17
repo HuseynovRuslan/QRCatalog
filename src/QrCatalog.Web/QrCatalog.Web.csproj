@@ -22,4 +22,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Dev faylı produksiya image-inə DÜŞMƏSİN: içində lokal admin paroluna və
+         localhost bağlantı sətrinə bənzər dəyərlər var. ASPNETCORE_ENVIRONMENT-də
+         təsadüfi "Development" onları canlı serverdə aktivləşdirə bilərdi. -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>

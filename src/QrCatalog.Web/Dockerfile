@@ -27,6 +27,16 @@ RUN dotnet publish src/QrCatalog.Web -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app .
+
+# Konteyner root olmayan istifadəçi ilə işləyir, /app isə root-a məxsusdur. Bu iki qovluq
+# ƏVVƏLCƏDƏN yaradılıb sahibi dəyişdirilməlidir:
+#  · uploads — LocalDiskStorage konstruktorda Directory.CreateDirectory çağırır; icazə
+#    olmasa tətbiq startup-da yıxılır (Storage__Provider=Local defaultudur);
+#  · keys — Data Protection açar dəstəsi (bax Program.cs).
+# Named volume boş olanda Docker image-dəki məzmunu VƏ SAHİBLİYİ volume-a köçürür,
+# ona görə volume da düzgün sahiblə gəlir.
+RUN mkdir -p /app/uploads /app/keys && chown -R $APP_UID:$APP_UID /app/uploads /app/keys
+
 USER $APP_UID
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "QrCatalog.Web.dll"]

@@ -63,6 +63,45 @@ public sealed class HardeningTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BehindReverseProxy_HttpsIsHonoured_SoAuthCookieIsSecure()
+    {
+        if (_factory is null) return; // baza yoxdur
+
+        // Produksiyada TLS Caddy-də bitir və tətbiqə düz HTTP çatır. Cookie siyasəti
+        // SameAsRequest-dir, ona görə X-Forwarded-Proto oxunmasa auth cookie-si Secure
+        // bayrağı ALMIR (və HSTS də göndərilmir, rate limit hər ziyarətçini ayırmır).
+        // Bu test həmin zənciri qoruyur — sınsa boşluq səssizcə produksiyaya keçər.
+        var client = _factory.CreateClient(
+            new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+        var antiforgery = new HttpRequestMessage(HttpMethod.Get, "/api/auth/antiforgery");
+        antiforgery.Headers.Add("X-Forwarded-Proto", "https");
+        var tokenResponse = await client.SendAsync(antiforgery);
+        var token = (await tokenResponse.Content.ReadFromJsonAsync<AntiforgeryResponse>())!.Token;
+        var antiforgeryCookie = tokenResponse.Headers.GetValues("Set-Cookie")
+            .First(c => c.StartsWith(".AspNetCore.Antiforgery", StringComparison.Ordinal));
+
+        var login = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
+        {
+            Content = JsonContent.Create(new { email = AdminEmail, password = AdminPassword }),
+        };
+        login.Headers.Add("X-XSRF-TOKEN", token);
+        login.Headers.Add("Cookie", antiforgeryCookie.Split(';')[0]);
+        login.Headers.Add("X-Forwarded-Proto", "https");
+        login.Headers.Add("X-Forwarded-For", "203.0.113.7");
+
+        var response = await client.SendAsync(login);
+        Assert.True(response.IsSuccessStatusCode,
+            $"Giriş: {(int)response.StatusCode} — {await response.Content.ReadAsStringAsync()}");
+
+        var authCookie = Assert.Single(response.Headers.GetValues("Set-Cookie"),
+            c => c.StartsWith("qrcatalog.auth", StringComparison.Ordinal));
+        Assert.Contains("secure", authCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", authCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=strict", authCookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SecurityHeaders_PresentOnPublicPages()
     {
         if (_factory is null) return; // Docker yoxdur

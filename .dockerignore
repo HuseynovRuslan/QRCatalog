@@ -9,3 +9,6 @@
 .github
 .vs
 *.md
+
+# Serverdəki produksiya sirləri build context-inə (və layer keşinə) düşməsin
+.env

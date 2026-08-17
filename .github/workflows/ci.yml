@@ -29,6 +29,16 @@ jobs:
       - name: Test
         run: dotnet test --no-build -c Release
 
+      # Model ilə snapshot ayrılsa növbəti miqrasiya gözlənilməz dəyişiklikləri öz içinə alır.
+      # Xüsusən DeclareClientAssignedKeys kimi kod-əsaslı model qaydaları səssizcə sürüşə bilər.
+      - name: EF model drift
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes \
+            --project src/QrCatalog.Infrastructure \
+            --startup-project src/QrCatalog.Web \
+            --no-build --configuration Release
+
       - name: Admin build
         working-directory: admin
         run: |

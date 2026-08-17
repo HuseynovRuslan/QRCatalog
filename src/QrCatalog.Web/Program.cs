@@ -1,4 +1,6 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using QrCatalog.Application.Abstractions;
@@ -34,6 +36,30 @@ try
     builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
         options.TextEncoderSettings =
             new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
+
+    // GERİ DÖNÜŞÜ OLMAYAN parametr: bu ünvan QR-ın İÇİNƏ yazılır və etiket çap olunandan
+    // sonra dəyişdirilə bilmir. Verilməsə kod sorğunun host-una keçir — proxy arxasında bu
+    // asanlıqla http://server-ip:8080 kimi bir şey ola bilər və minlərlə etiket ölü çıxar.
+    // Ona görə produksiyada tətbiq bu açar olmadan QALXMIR (bax ops/README.md, S2-01).
+    if (!builder.Environment.IsDevelopment() &&
+        string.IsNullOrWhiteSpace(builder.Configuration["Qr:PublicBaseUrl"]))
+    {
+        throw new InvalidOperationException(
+            "Qr__PublicBaseUrl verilməyib. Bu ünvan QR kodların içinə yazılır və çapdan sonra " +
+            "dəyişdirilə bilmir, ona görə produksiyada təsadüfi host-a bel bağlamaq qadağandır. " +
+            "Nümunə: Qr__PublicBaseUrl=https://qr.sirket.az (sonda / olmadan).");
+    }
+
+    // Data Protection açarları: auth cookie-ləri və antiforgery tokenləri bunlarla imzalanır.
+    // Default halda açarlar konteynerin içindədir — hər `up --build` bütün adminləri
+    // sistemdən çıxarır və açıq formaları etibarsız edir. Volume-a yazılanda deploy sakit keçir.
+    var keysPath = builder.Configuration["DataProtection:KeysPath"];
+    if (!string.IsNullOrWhiteSpace(keysPath))
+    {
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+            .SetApplicationName("QrCatalog");
+    }
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<QrCatalog.Application.Abstractions.ICurrentUser,
@@ -86,9 +112,32 @@ try
             }));
     });
 
+    // Produksiyada tətbiq reverse-proxy (Caddy) arxasındadır: TLS orada bitir və sorğular
+    // konteynerə düz HTTP kimi çatır. Proxy başlıqları oxunmasa üç şey SƏSSİZCƏ sınır:
+    //  1. rate limit hər ziyarətçini deyil, proxy-nin TƏK IP-sini sayır — "5 müraciət/dəq"
+    //     bütün sayta ümumi olur və altıncı müştəri rədd edilir;
+    //  2. Request.IsHttps false qalır → auth cookie Secure bayrağı almır, UseHsts başlığı
+    //     heç vaxt göndərilmir (HstsMiddleware yalnız HTTPS sorğularda işləyir);
+    //  3. request-dən qurulan URL-lər http:// olur — QR-ın içinə düşən ünvan da (!).
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        // Konteyner şəbəkəsində proxy-nin IP-si loopback deyil və qabaqcadan bilinmir,
+        // ona görə default siyahılar boşaldılır. ŞƏRT: tətbiq portu yalnız proxy-yə açıq
+        // olmalıdır (docker-compose.yml onu 127.0.0.1-ə bağlayır), birbaşa internetə YOX —
+        // əks halda kənar adam X-Forwarded-For uydurub rate limit-i və IP-ni aldadar.
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
     // Health check-lər (postgres daxil) AddInfrastructure-da qeydiyyata alınır
 
     var app = builder.Build();
+
+    // Ən başda: bundan sonra gələn hər şey (HSTS, cookie, rate limit, URL qurma)
+    // düzgün sxem və ziyarətçi IP-si görür
+    app.UseForwardedHeaders();
 
     if (!app.Environment.IsDevelopment())
     {
@@ -152,6 +201,11 @@ try
 catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "Host gözlənilmədən dayandı");
+
+    // Sıfır çıxış kodu Docker-ə "uğurla bitdi" deyir: `restart: unless-stopped` altında
+    // konteyner səssizcə dövrə vurur və `docker compose ps` heç bir problem göstərmir.
+    // Konfiqurasiya xətası GÖRÜNƏN olmalıdır.
+    Environment.ExitCode = 1;
 }
 finally
 {

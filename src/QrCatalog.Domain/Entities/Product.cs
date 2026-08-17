@@ -188,9 +188,14 @@ public sealed class ProductImage
     public DateTime CreatedAtUtc { get; private set; }
 
     /// <summary>Id kənardan verilir — storage prefiksi ("products/{productId}/{id}")
-    /// yaradılmadan əvvəl məlum olmalıdır.</summary>
+    /// yaradılmadan əvvəl məlum olmalıdır. Açar boş ola bilməz: model onu bazada
+    /// generasiya etmir (bax AppDbContext.DeclareClientAssignedKeys), ona görə boş Guid
+    /// sıfırlarla dolu sətir kimi yazılar və ikinci şəkildə açar toqquşması verər.</summary>
     public static ProductImage Create(Guid id, Guid productId, string storagePrefix, IEnumerable<int> widths)
     {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Şəkil Id-si boş ola bilməz.", nameof(id));
+
         return new ProductImage
         {
             Id = id,

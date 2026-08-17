@@ -1,18 +1,47 @@
 # Server (staging/produksiya) üçün. Lokal inkişafda Docker lazım deyil:
 # lokal PostgreSQL 18 + `dotnet run` işlədilir — bax README.md.
+#
+# Tətbiqin bütün env-ləri `.env` faylındadır (nümunə: .env.example).
 services:
   web:
     build:
       context: .
       dockerfile: src/QrCatalog.Web/Dockerfile
     ports:
-      - "8080:8080"
+      # YALNIZ loopback-a bağlanır: TLS-i və internetə çıxışı host-daki Caddy verir.
+      # Bu, Program.cs-dəki ForwardedHeaders konfiqurasiyasının təhlükəsizlik şərtidir —
+      # port birbaşa internetə açılsa kənar adam X-Forwarded-For uydura bilər.
+      - "${WEB_BIND:-127.0.0.1:8080}:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=qrcatalog;Username=postgres;Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env-də verilməlidir}
+      # Auth cookie/antiforgery açarları volume-da qalır — deploy adminləri sistemdən çıxarmır
+      - DataProtection__KeysPath=/app/keys
+    env_file:
+      - .env
+    volumes:
+      # Storage__Provider=Local olanda yüklənən şəkillər buradadır. Volume olmasa
+      # `up --build` hər dəfə bütün məhsul şəkillərini silər.
+      - uploads:/app/uploads
+      - dpkeys:/app/keys
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      # Konfiqurasiya xətasında tətbiq qalxmır; healthcheck olmasa `docker compose ps`
+      # bunu göstərmir və problem gözdən qaçır
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -q Healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging:
+      # Serilog hər sorğunu yazır — limit olmasa jurnal diski doldurur və baza da
+      # eyni diskdə yazmağı dayandırır
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
 
   postgres:
@@ -20,6 +49,8 @@ services:
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env-də verilməlidir}
       - POSTGRES_DB=qrcatalog
+    # Port QƏSDƏN publish olunmur — bazaya yalnız web konteyneri çıxır.
+    # Backup/bərpa skriptləri `docker compose exec` ilə içəridən işləyir.
     volumes:
       # DİQQƏT: postgres:18-dən data qatı /var/lib/postgresql-dır (data alt-qovluğu DEYİL) —
       # köhnə yol mount olunsa baza anonim volume-a yazılır və `down`+`up`-da itir.
@@ -29,7 +60,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
 
 volumes:
   pgdata:
+  uploads:
+  dpkeys:
