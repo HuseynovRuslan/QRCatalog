@@ -320,7 +320,13 @@ def seed(client):
     sql("""
         WITH ranked AS (
             SELECT q."Id", q."CompanyId",
-                   row_number() OVER (ORDER BY q."HumanCode") AS rn
+                   -- Sıralama QƏSDƏN prefiksə görədir: əlifba sırası şezlonqları (SZ) sona
+                   -- atır və panel əsas məhsul xəttini «ən az skan olunan» kimi göstərərdi.
+                   row_number() OVER (ORDER BY
+                       CASE left(q."HumanCode", 2)
+                           WHEN 'SZ' THEN 1 WHEN 'SK' THEN 2 WHEN 'MS' THEN 3
+                           WHEN 'CT' THEN 4 ELSE 5 END,
+                       q."HumanCode") AS rn
             FROM "QrCodes" q
         ), counts AS (
             SELECT r.*, (ARRAY[41,28,23,17,14,11,9,7,6,5,4,3,2,0,0,0])[LEAST(r.rn, 16)] AS n
