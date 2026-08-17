@@ -14,6 +14,8 @@ import {
   type SpecItem,
 } from '../api/products'
 import { useCreateQrCode, useQrCodesForTarget, useSheetDownload } from '../api/qrcodes'
+import { useSitesForProduct } from '../api/sites'
+import SiteMap from '../components/SiteMap'
 
 /* ── spesifikasiya redaktoru ───────────────────────── */
 
@@ -89,7 +91,66 @@ function SpecsEditor({ productId, initial }: { productId: string; initial: SpecI
   )
 }
 
-/* ── şəkil paneli ──────────────────────────────────── */
+/* ── Bu model harada quraşdırılıb ───────────────────
+   Xəritə + siyahı: hansı parkda, hoteldə, neçə ədəd. Satışdan sonra zəng gələndə
+   ("bizdəki skamyalardan biri sınıb") cavab burada bir baxışda görünür. */
+function SitesPanel({ productId }: { productId: string }) {
+  const sites = useSitesForProduct(productId)
+  const [focused, setFocused] = useState<string | null>(null)
+
+  const rows = sites.data ?? []
+  const total = rows.reduce(
+    (sum, site) =>
+      sum + site.items.filter(i => i.productId === productId).reduce((n, i) => n + i.quantity, 0),
+    0,
+  )
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-base font-semibold">Quraşdırıldığı yerlər</h2>
+      <p className="mt-1 text-sm text-stone-500">
+        {rows.length === 0
+          ? 'Bu model hələ heç bir obyektdə qeydə alınmayıb.'
+          : `${rows.length} obyekt, ${total} ədəd.`}
+      </p>
+
+      {rows.length > 0 && (
+        <>
+          <div className="mt-3">
+            <SiteMap
+              sites={rows}
+              selectedId={focused}
+              onSelect={setFocused}
+              className="h-72 w-full rounded-lg border border-stone-200"
+            />
+          </div>
+          <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white">
+            {rows.map(site => {
+              const quantity = site.items
+                .filter(i => i.productId === productId)
+                .reduce((n, i) => n + i.quantity, 0)
+              return (
+                <li
+                  key={site.id}
+                  onClick={() => setFocused(site.id)}
+                  className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-stone-50 ${
+                    focused === site.id ? 'bg-emerald-50/60' : ''
+                  }`}
+                >
+                  <span className="font-medium">{site.name}</span>
+                  {site.address && (
+                    <span className="text-xs text-stone-400">{site.address}</span>
+                  )}
+                  <span className="ml-auto font-medium tabular-nums">{quantity} ədəd</span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+    </section>
+  )
+}
 
 /* ── QR kodlar ──────────────────────────────────────
    Məhsulun etiketi buradan görünür və çap olunur. Əvvəl belə deyildi: kodlar yalnız
@@ -174,6 +235,8 @@ function QrPanel({ productId }: { productId: string }) {
     </section>
   )
 }
+
+/* ── şəkil paneli ──────────────────────────────────── */
 
 function ImagesPanel({ productId }: { productId: string }) {
   const product = useProduct(productId)
@@ -401,6 +464,7 @@ export default function ProductEdit() {
           <SpecsEditor productId={id} initial={product.data.specs} />
           <ImagesPanel productId={id} />
           <QrPanel productId={id} />
+          <SitesPanel productId={id} />
         </>
       )}
     </div>

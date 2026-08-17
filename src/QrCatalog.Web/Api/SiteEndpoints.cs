@@ -19,13 +19,17 @@ public static class SiteEndpoints
     {
         var group = app.MapGroup("/api/admin/sites");
 
-        group.MapGet("/", async (AppDbContext db, string? search) =>
+        group.MapGet("/", async (AppDbContext db, string? search, Guid? productId) =>
         {
             var query = db.Sites.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(s =>
                     EF.Functions.ILike(s.Name, $"%{search}%") ||
                     (s.Address != null && EF.Functions.ILike(s.Address, $"%{search}%")));
+            // "Bu model harada quraşdırılıb" — məhsul səhifəsindəki xəritə bunu işlədir.
+            // Əks istiqamət (obyekt → məhsullar) siyahının özündə onsuz da var.
+            if (productId is { } product)
+                query = query.Where(s => s.Items.Any(i => i.ProductId == product));
 
             var sites = await query
                 .OrderBy(s => s.Name)

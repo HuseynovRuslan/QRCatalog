@@ -32,11 +32,12 @@ interface ItemRow {
 
 export default function Sites() {
   const [search, setSearch] = useState('')
+  const [productFilter, setProductFilter] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [form, setForm] = useState<(SaveSite & { id?: string }) | null>(null)
   const [rows, setRows] = useState<ItemRow[]>([])
 
-  const sites = useSites(search)
+  const sites = useSites(search, productFilter)
   const products = useProducts('', '', '', 1)
   const create = useCreateSite()
   const update = useUpdateSite()
@@ -126,12 +127,27 @@ export default function Sites() {
         </button>
       </div>
 
-      <input
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Ad və ya ünvan üzrə axtar"
-        className="mt-4 w-full max-w-sm rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
-      />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Ad və ya ünvan üzrə axtar"
+          className="w-full max-w-sm rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
+        />
+        {/* Model üzrə süzgəc: "bu şezlonq harada var" sualına xəritədə cavab verir */}
+        <select
+          value={productFilter}
+          onChange={e => setProductFilter(e.target.value)}
+          className="rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
+        >
+          <option value="">Bütün məhsullar</option>
+          {productOptions.map(product => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="mt-4">
         <SiteMap

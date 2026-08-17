@@ -139,6 +139,20 @@ public sealed class SiteFlowTests : IAsyncLifetime
             new { items = new object[] { new { productId = Guid.NewGuid(), quantity = 1, installedOn = (string?)null } } });
         Assert.Equal(HttpStatusCode.BadRequest, unknownRes.StatusCode);
 
+        // 5b. Məhsul üzrə süzgəc: "bu model harada quraşdırılıb"
+        await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/sites", new
+        {
+            name = "Şəki Karvansaray", kind = "Cafe",
+            latitude = 41.1975, longitude = 47.1900,
+        });
+        Assert.Equal(2, (await admin.GetFromJsonAsync<List<SiteResponse>>("/api/admin/sites"))!.Count);
+        var withBench = (await admin.GetFromJsonAsync<List<SiteResponse>>(
+            $"/api/admin/sites?productId={bench.Id}"))!;
+        Assert.Single(withBench);
+        Assert.Equal("Dədə Qorqud parkı", withBench[0].Name);
+        Assert.Empty((await admin.GetFromJsonAsync<List<SiteResponse>>(
+            $"/api/admin/sites?productId={lounger.Id}"))!); // 3-cü bənddə çıxarıldı
+
         // 6. Axtarış ünvana da baxır
         Assert.Single((await admin.GetFromJsonAsync<List<SiteResponse>>(
             "/api/admin/sites?search=nərimanov"))!);
@@ -148,7 +162,7 @@ public sealed class SiteFlowTests : IAsyncLifetime
         // 7. Obyekt silinir (məhsuldan fərqli olaraq — səhv ünvan tarixi məlumat deyil)
         Assert.Equal(HttpStatusCode.NoContent,
             (await SendJsonAsync(admin, HttpMethod.Delete, $"/api/admin/sites/{site.Id}")).StatusCode);
-        Assert.Empty((await admin.GetFromJsonAsync<List<SiteResponse>>("/api/admin/sites"))!);
+        Assert.Single((await admin.GetFromJsonAsync<List<SiteResponse>>("/api/admin/sites"))!);
 
         // 8. Girişsiz qonaq obyektləri görmür — bu daxili məlumatdır
         Assert.Equal(HttpStatusCode.Unauthorized,

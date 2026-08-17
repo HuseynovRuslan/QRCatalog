@@ -56,12 +56,22 @@ export const SITE_KINDS: { value: SiteKind; label: string }[] = [
 
 const KEY = ['sites']
 
-export function useSites(search: string) {
+export function useSites(search: string, productId = '') {
   const params = new URLSearchParams()
   if (search) params.set('search', search)
+  if (productId) params.set('productId', productId)
   return useQuery<Site[], Error>({
-    queryKey: [...KEY, search],
+    queryKey: [...KEY, search, productId],
     queryFn: () => api<Site[]>(`/api/admin/sites?${params}`),
+  })
+}
+
+/** Bir modelin quraşdırıldığı yerlər — məhsul səhifəsindəki xəritə üçün. */
+export function useSitesForProduct(productId: string | undefined) {
+  return useQuery<Site[], Error>({
+    queryKey: [...KEY, 'product', productId],
+    queryFn: () => api<Site[]>(`/api/admin/sites?productId=${productId}`),
+    enabled: Boolean(productId),
   })
 }
 
