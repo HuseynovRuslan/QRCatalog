@@ -1,160 +1,144 @@
 # Məhsul şəkilləri — promptlar və yükləmə
 
 Kataloqdaki 15 demo məhsulun şəkli yoxdur. Bu sənəd onları yaratmaq üçündür.
-
-**Fayl adı SKU olmalıdır** — `SZ-BH-AG.png`. Yükləyici faylı SKU-ya görə tapır.
-İkinci şəkil: `SZ-BH-AG-2.png` (nömrəsiz fayl əsas şəkil olur).
+**Bütün məhsullar taxtadandır** — promptlar da ağac növünü və emalını göstərir.
 
 **Ölçü:** ən azı **1280 piksel en**, tərcihən **1536×1024**. Tətbiq 320/640/1280/1920
 variantlarını özü yaradır, amma şəkli BÖYÜTMÜR — kiçik fayl kataloqda bulanıq qalır.
 
----
-
-## 1. Ortaq üslub (STYLE)
-
-Bütün 15 şəkil bir kataloqa aid görünməlidir. Hər promptun sonuna eyni STYLE bloku əlavə olunur —
-əks halda biri studiya fonunda, biri bağda çıxır və kataloq yamaq-yamaq görünür.
-
-```
-STYLE: Professional e-commerce product photograph. Single product, centered, three-quarter
-view from slightly above eye level. Clean sunlit outdoor terrace setting: smooth light warm-grey
-concrete floor, softly blurred neutral background, no walls or furniture behind. Bright natural
-daylight from the upper left, soft realistic contact shadow under the product. Sharp focus on the
-whole product, generous empty margin around it. 4:3 landscape framing.
-NO people, NO text, NO logos, NO watermarks, NO price tags, NO collage or multiple angles,
-NO plants or props competing with the product.
-```
+**Adlandırma:** lazım deyil. Şəkilləri siyahı sırası ilə yükləyin, yükləyici sıra rejimində
+özü uyğunlaşdırır (aşağıda). SKU adı ilə saxlamaq isteğe bağlıdır.
 
 ---
 
-## 2. ChatGPT ilə (TÖVSİYƏ OLUNAN YOL — API açarı lazım deyil)
+## 1. ChatGPT ilə — 10 + 5 dəstə (API açarı LAZIM DEYİL)
 
-Abunəlik şəkil generasiyasını ChatGPT tətbiqində verir. Aşağıdaki bloku **bir dəfə** yapışdırın,
-sonra sadəcə "sonrakı" yazın — üslub bütün 15 şəkildə eyni qalsın deyə belə qurulub.
+Abunəlik şəkil generasiyasını ChatGPT tətbiqində verir; API açarı ayrı ödənişli məhsuldur və
+buna görə lazım deyil.
+
+### Birinci dəstə (1–10)
 
 ```
-Mən açıq hava mebeli kataloqu üçün 15 məhsul şəkli hazırlayıram. Şəkilləri BİR-BİR
-generasiya edəcəksən: mən "sonrakı" yazdıqca siyahıdan növbətini çəkirsən.
+Mən taxta açıq hava mebeli kataloqu üçün məhsul şəkilləri hazırlayıram.
+Aşağıdaki 10 məhsulun HƏR BİRİ üçün AYRI şəkil generasiya et.
 
-Hər şəkil üçün eyni üslub blokunu tətbiq et (üslub dəyişməməlidir, kataloq bir bütöv
-görünməlidir):
+Hamısına eyni üslub tətbiq olunmalıdır — kataloq bir bütöv görünməlidir:
 
-Professional e-commerce product photograph. Single product, centered, three-quarter view
-from slightly above eye level. Clean sunlit outdoor terrace setting: smooth light warm-grey
-concrete floor, softly blurred neutral background, no walls or furniture behind. Bright
-natural daylight from the upper left, soft realistic contact shadow under the product. Sharp
-focus on the whole product, generous empty margin around it. 4:3 landscape framing.
-NO people, NO text, NO logos, NO watermarks, NO price tags, NO collage, NO multiple angles.
+Professional e-commerce product photograph of SOLID WOOD outdoor furniture. Single product,
+centered, three-quarter view from slightly above eye level. Clean sunlit outdoor terrace:
+smooth light warm-grey concrete floor, softly blurred neutral background, no walls or other
+furniture behind. Bright natural daylight from the upper left, soft realistic contact shadow
+under the product. Visible natural wood grain and slat structure, honest matte wood finish.
+Sharp focus across the whole product, generous empty margin around it. 4:3 landscape framing.
+NO people, NO text, NO logos, NO watermarks, NO price tags, NO collage, NO multiple angles,
+NO plastic or aluminium parts unless stated.
 
-SİYAHI:
-1. A white stackable plastic sun lounger with a ribbed seat and integrated wheels at one end, adjustable backrest raised to a reclined position, smooth matte white polypropylene.
-2. An anthracite dark-grey stackable plastic sun lounger, ribbed seat surface, adjustable backrest raised, matte charcoal polypropylene finish.
-3. A folding sun lounger made of oiled acacia hardwood slats with a five-position adjustable backrest and two small wooden wheels at the foot end, warm honey-brown wood grain visible.
-4. A modern sun lounger with a slim silver anodised aluminium frame and beige textilene mesh fabric seat, low profile, black frame accents, mesh weave texture visible.
-5. A premium sun lounger with a brushed aluminium frame and a thick cream-white quilted cushion with piped edges, small matching headrest pillow.
-6. A three-seat public park bench: black cast-iron ornate side frames and legs, seat and backrest made of five thick pine wood slats stained warm brown, bolt holes visible in the feet.
-7. A two-seat garden bench in solid acacia wood, slatted seat and vertical-slat backrest, rounded armrests, natural warm wood tone, simple clean joinery.
-8. An A-frame wooden picnic table set where the table and two bench seats form one single connected unit, light pine wood with visible grain, sturdy angled legs.
-9. A round white plastic garden table, 80 cm diameter, textured tabletop with a small centre hole for a parasol closed with a plug, three tapered legs, matte polypropylene.
-10. A rectangular outdoor dining table with a light grey HPL tabletop and slim brushed aluminium legs, clean minimal design, 150 by 90 cm proportions.
-11. A small folding balcony table in pine wood with a metal hook bracket for mounting on a railing, shown unfolded, compact square top.
-12. A large round garden parasol, 3 metre canopy in light sand-beige polyester, silver aluminium pole with a visible tilt joint below the canopy, canopy fully open, no base.
-13. A half-round wall-mounted awning parasol in beige polyester, semicircular canopy open, slim aluminium ribs and wall bracket visible.
-14. A white stackable garden chair in matte polypropylene with a slatted backrest and slightly curved seat, tapered legs with grey plastic floor tips.
-15. A cafe terrace chair with a slim aluminium frame fully wrapped in cappuccino-beige synthetic rattan weave, curved backrest, no cushion, tight even weave texture.
-
-Birinci şəkli indi çək.
+MƏHSULLAR:
+1. A solid acacia wood sun lounger built from smooth honey-brown oiled slats, five-position backrest raised to a reclined angle, two small wooden wheels at the foot end.
+2. A thermally modified pine (ThermoWood) sun lounger, pale caramel-honey sanded slats, low slim profile, backrest slightly raised, no wheels.
+3. A solid acacia wood sun lounger with a thick cream-white quilted cushion laid over the slats and a small matching headrest pillow, wooden frame clearly visible at the sides.
+4. A wide two-person wooden day-bed lounger with a matching wooden canopy frame above it holding a beige fabric canopy, pine wood with antiseptic finish.
+5. A three-seat park bench made entirely of thick solid pine: slatted seat and backrest, chunky square wooden legs, warm brown lacquered finish, small bolt holes visible in the feet.
+6. A two-seat acacia wood garden bench with a slatted backrest and armrests, all edges rounded, natural warm honey wood tone.
+7. A simple backless wooden bench 150 cm long, five pine slats on two solid wooden leg panels, natural pine tone.
+8. A wooden storage bench with a hinged seat lid, lid propped slightly open to reveal the empty storage compartment inside, lacquered pine.
+9. An A-frame wooden picnic table set where the table and two bench seats form one single connected unit, natural pine with visible grain, sturdy angled legs.
+10. A large rectangular solid pine garden dining table, thick oiled plank top, straight square legs, no chairs around it.
 ```
 
-Şəkilləri **siyahı sırası ilə** yükləyin və hamısını bir qovluğa atın. Adını dəyişməyə ehtiyac
-YOXDUR — yükləyici sıra rejimində işləyə bilir:
+### İkinci dəstə (11–15)
+
+```
+Eyni üslubla davam et — indi qalan 5 məhsul. Hər biri üçün ayrı şəkil.
+
+11. A round folding acacia wood bistro table, 70 cm diameter, shown fully unfolded, slatted round top, slim wooden legs.
+12. A folding acacia wood garden chair shown open, slatted seat and slatted backrest, honey oiled finish.
+13. An Adirondack style garden chair made of pine with a smooth coloured lacquer finish, wide flat armrests, deeply reclined slatted back.
+14. A three-seat wooden garden swing bench hanging from its own solid wooden A-frame, with a beige fabric canopy on top, pine wood.
+15. A hanging acacia wood bench swing, 120 cm wide, suspended by thick natural ropes with metal hooks, shown hanging freely.
+```
+
+Şəkil çıxdıqca yoxlayın: **mətn, adam, loqo, qiymət etiketi, ya ikinci məhsul olmamalıdır.**
+Belə şəkil görsəniz "bunu yenidən çək, üzərində yazı olmasın" deyin.
+
+---
+
+## 2. Yükləmə
+
+Şəkilləri **siyahı sırası ilə** bir qovluğa yükləyin, adını dəyişməyə ehtiyac yoxdur:
 
 ```bash
-python3 ops/upload-images.py sekiller --order --yes
+python3 ops/upload-images.py sekiller --order
 ```
 
-Sıra rejimi faylları yaranma vaxtına görə düzür və yuxarıdaki 1–15 siyahısına uyğunlaşdırır.
-Şəkli yenidən çəkib əvəz etmisinizsə sıra pozula bilər — o halda faylı SKU adı ilə saxlayın
-və rejimsiz işlədin (bax 3-cü bölmə).
-
-## 2b. Codex/API ilə (yalnız API açarınız varsa)
-
-ChatGPT abunəliyi API-yə şamil olunmur — bu yol ayrıca ödənişli açar tələb edir. Açar yoxdursa
-yuxarıdaki yolu işlədin.
-
-```
-Bu repoda (QrCatalog) 15 demo məhsul üçün şəkil hazırlamalısan.
-
-QAYNAQ: ops/sekil-promptlari.md — orada STYLE bloku və hər SKU üçün məhsul təsviri var.
-Hər şəkil promptu = "<məhsul təsviri>. <STYLE bloku>".
-
-ADDIMLAR:
-1. `sekiller/` qovluğu yarat (repo kökündə, .gitignore-a əlavə et — şəkillər commit olunmur).
-2. Hər 15 SKU üçün bir şəkil generasiya et. OpenAI Images API işlət:
-   model `gpt-image-1`, ölçü `1536x1024`, key `OPENAI_API_KEY` mühit dəyişənindən.
-   Faylı `sekiller/<SKU>.png` kimi yaz.
-3. Hər faylı yoxla: həqiqi PNG/JPEG olmalı, eni >= 1280 piksel, ölçüsü > 100 KB.
-   Uyğun olmayanı yenidən generasiya et (maksimum 2 cəhd).
-4. Şəkildə mətn, adam, loqo, ya birdən çox məhsul görünürsə — promptu dəyişmədən
-   yenidən generasiya et (model bəzən mətn əlavə edir).
-5. Sonda qovluğun məzmununu SKU-larla tutuşdur: 15 faylın hamısı olmalıdır,
-   çatmayanı sadala.
-
-ETMƏ:
-- Şəkilləri repoya commit etmə (yalnız .gitignore sətrini commit et).
-- src/ altındaki heç bir kodu dəyişmə — bu tapşırıq yalnız şəkil hazırlamaqdır.
-- Mövcud .env faylına toxunma.
-- SERVERƏ HEÇ NƏ YÜKLƏMƏ və deploy etmə: nə scp, nə ssh, nə docker. Şəkilləri yalnız
-  lokal `sekiller/` qovluğuna yaz — yükləməni ayrıca biz edəcəyik.
-
-API açarı yoxdursa DAYAN və bunu bildir. Şəkilləri Pillow ilə "çəkmə" — düz rəngli
-plasholder kataloqu real göstərmir, məqsəd məhz odur.
-```
-
-Şəkillər hazır olandan sonra yükləmə (server tərəfində, `/opt/qrcatalog`-da):
-
-```bash
-python3 ops/upload-images.py sekiller
-```
-
-Lokal maşındasınızsa əvvəlcə serverə köçürün:
+Sıra rejimi faylları yaranma vaxtına görə düzüb 1–15 siyahısına uyğunlaşdırır və yükləməzdən
+əvvəl uyğunluğu göstərib təsdiq istəyir. Lokal maşındasınızsa əvvəlcə serverə köçürün:
 
 ```bash
 scp -r sekiller root@62.84.179.39:/opt/qrcatalog/
 ```
 
----
-
-## 3. Məhsul təsvirləri (hər birinin sonuna STYLE əlavə olunur)
-
-| SKU | Prompt (məhsul hissəsi) |
-|---|---|
-| `SZ-BH-AG` | A white stackable plastic sun lounger with a ribbed seat and integrated wheels at one end, adjustable backrest raised to a reclined position, smooth matte white polypropylene. |
-| `SZ-BH-AN` | An anthracite dark-grey stackable plastic sun lounger, ribbed seat surface, adjustable backrest raised, matte charcoal polypropylene finish. |
-| `SZ-RV-TX` | A folding sun lounger made of oiled acacia hardwood slats with a five-position adjustable backrest and two small wooden wheels at the foot end, warm honey-brown wood grain visible. |
-| `SZ-PL-TK` | A modern sun lounger with a slim silver anodised aluminium frame and beige textilene mesh fabric seat, low profile, black frame accents, mesh weave texture visible. |
-| `SZ-LX-YS` | A premium sun lounger with a brushed aluminium frame and a thick cream-white quilted cushion with piped edges, small matching headrest pillow. |
-| `SK-PR-3N` | A three-seat public park bench: black cast-iron ornate side frames and legs, seat and backrest made of five thick pine wood slats stained warm brown, bolt holes visible in the feet. |
-| `SK-IP-AK` | A two-seat garden bench in solid acacia wood, slatted seat and vertical-slat backrest, rounded armrests, natural warm wood tone, simple clean joinery. |
-| `SK-PK-DS` | An A-frame wooden picnic table set where the table and two bench seats form one single connected unit, light pine wood with visible grain, sturdy angled legs. |
-| `MS-YM-80` | A round white plastic garden table, 80 cm diameter, textured tabletop with a small centre hole for a parasol closed with a plug, three tapered legs, matte polypropylene. |
-| `MS-DB-150` | A rectangular outdoor dining table with a light grey HPL tabletop and slim brushed aluminium legs, clean minimal design, 150 by 90 cm proportions. |
-| `MS-QT-BL` | A small folding balcony table in pine wood with a metal hook bracket for mounting on a railing, shown unfolded, compact square top. |
-| `CT-BG-300` | A large round garden parasol, 3 metre canopy in light sand-beige polyester, silver aluminium pole with a visible tilt joint below the canopy, canopy fully open, no base. |
-| `CT-DV-YD` | A half-round wall-mounted awning parasol in beige polyester, flat back edge against nothing, semicircular canopy open, slim aluminium ribs and wall bracket visible. |
-| `ST-ST-AG` | A white stackable garden chair in matte polypropylene with a slatted backrest and slightly curved seat, tapered legs with grey plastic floor tips. |
-| `ST-KF-RT` | A cafe terrace chair with a slim aluminium frame fully wrapped in cappuccino-beige synthetic rattan weave, curved backrest, no cushion, tight even weave texture. |
+Şəkli yenidən çəkib əvəz etmisinizsə vaxt sırası pozulur — o halda faylı SKU adı ilə saxlayın
+(`SZ-AK-KL.png`, ikinci şəkil üçün `SZ-AK-KL-2.png`) və `--order` olmadan işlədin.
 
 ---
 
-## 4. Nəyi yoxlamaq lazımdır
+## 3. Sıra və SKU cədvəli
 
-Yükləmədən sonra kataloqa baxın: https://katalog.qrlog.az/katalog
+| № | SKU | Məhsul |
+|---|---|---|
+| 1 | `SZ-AK-KL` | Akasiya şezlonq, klassik |
+| 2 | `SZ-TS-AC` | Termo-şam şezlonq |
+| 3 | `SZ-AK-YS` | Akasiya şezlonq, yastıqlı |
+| 4 | `SZ-IK-KL` | İkilik şezlonq, kölgəlikli |
+| 5 | `SK-PR-3N` | Park skamyası, 3 nəfərlik |
+| 6 | `SK-IP-AK` | Bağ skamyası «İpək» |
+| 7 | `SK-AR-150` | Arxalıqsız skamya, 150 sm |
+| 8 | `SK-SD-QT` | Sandıqlı skamya |
+| 9 | `MS-PK-DS` | Piknik dəsti — masa və 2 skamya |
+| 10 | `MS-BG-180` | Bağ masası, 180×90 sm |
+| 11 | `MS-QT-70` | Qatlanan bistro masası, Ø70 — **arxiv** |
+| 12 | `ST-AK-QT` | Qatlanan akasiya stulu |
+| 13 | `ST-AD-KL` | Adirondack stulu — **qaralama** |
+| 14 | `SL-BG-3N` | Bağ salıncağı, 3 nəfərlik |
+| 15 | `SL-AS-120` | Asma salıncaq, 120 sm |
+
+Sıra `ops/demo-seed.py`-dakı məhsul sırası ilə eynidir — `--order` rejimi məhz onu oxuyur,
+ona görə siyahını dəyişəndə ikisi birlikdə dəyişməlidir.
+
+---
+
+## 4. Yükləmədən sonra yoxlanılacaqlar
+
+https://katalog.qrlog.az/katalog
 
 - 13 dərc olunmuş məhsulun hamısında şəkil var
-- Şəkillər bir üslubdadır (fon, işıq, rakurs eyni)
-- Heç birində mətn, adam, ya loqo yoxdur
+- Şəkillər bir üslubdadır: eyni fon, eyni işıq istiqaməti, eyni rakurs
+- Ağac rəngləri bir-birinə yaxındır (biri qırmızı maun, biri ağardılmış çıxmayıb)
+- Heç birində mətn, adam, loqo yoxdur
 - Telefonda kart şəkilləri kəsilməyib (kartlar kvadratdır, mərkəz qırpılır)
 
-`SZ-LX-YS` qaralama, `MS-QT-BL` arxiv məhsuldur — onların şəkli public saytda görünməyəcək,
+`MS-QT-70` arxiv, `ST-AD-KL` qaralama məhsuldur — şəkilləri public saytda görünməyəcək,
 amma admin paneldə lazımdır.
+
+---
+
+## 5. Codex/API yolu (yalnız API açarınız varsa)
+
+ChatGPT abunəliyi API-yə şamil olunmur. Açarınız varsa Codex-ə bu tapşırığı verə bilərsiniz:
+
+```
+Bu repoda 15 taxta məhsul üçün şəkil hazırla. Promptlar: ops/sekil-promptlari.md,
+1-ci bölmə (üslub bloku + 15 məhsul təsviri).
+
+1. `sekiller/` qovluğu yarat (.gitignore-da var).
+2. Hər məhsul üçün OpenAI Images API ilə şəkil çək: model `gpt-image-1`, ölçü `1536x1024`,
+   açar `OPENAI_API_KEY`. Fayl adı: `sekiller/<SKU>.png` (SKU cədvəli 3-cü bölmədədir).
+3. Hər faylı yoxla: həqiqi PNG, en >= 1280, ölçü > 100 KB. Uyğun olmayanı yenidən çək (maks 2 cəhd).
+4. Şəkildə mətn, adam, loqo, ya birdən çox məhsul varsa yenidən çək.
+5. Sonda 15 faylın hamısını yoxla, çatmayanı sadala.
+
+ETMƏ: şəkilləri commit etmə · src/ altında kod dəyişmə · .env-ə toxunma ·
+HEÇ BİR SERVERƏ qoşulma (nə ssh, nə scp, nə docker) — yükləməni ayrıca biz edirik.
+Açar yoxdursa DAYAN, Pillow ilə plasholder çəkmə.
+```
