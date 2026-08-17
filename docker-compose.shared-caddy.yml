@@ -1,0 +1,27 @@
+# Serverdə ARTIQ Caddy (ya başqa reverse proxy) konteyneri 80/443-ü tutubsa bu override
+# işlədilir: tətbiq host portu yerinə mövcud proxy-nin Docker şəbəkəsinə qoşulur və orada
+# `qrcatalog-web` adı ilə görünür. Proxy sadəcə `reverse_proxy qrcatalog-web:8080` yazır.
+#
+# İşə salmaq (compose bu adı avtomatik götürür):
+#   ln -s docker-compose.shared-caddy.yml docker-compose.override.yml
+#
+# NİYƏ REPODADIR: eyni serverdəki QRLog staging-i bir dəfə məhz buna görə itmişdi —
+# konfiqurasiya yalnız serverdə əl ilə yazılmışdı, repo ondan xəbərsizdi, və Caddy
+# konteyneri yenidən yaradılanda staging internetdən qopdu. Burada olan şeyi yenidən
+# qurmaq mümkündür; yalnız serverdə olan şeyi yox.
+#
+# proxy_net dəyəri host-a görə dəyişir: `docker inspect <proxy-konteyner> -f
+# '{{json .NetworkSettings.Networks}}'` ilə tapılır. 62.84.179.39-da bu
+# `attendanceqr_default`-dur (proxy: attendanceqr-caddy-1).
+services:
+  web:
+    networks:
+      default:
+      proxy_net:
+        aliases:
+          - qrcatalog-web
+
+networks:
+  proxy_net:
+    external: true
+    name: attendanceqr_default
