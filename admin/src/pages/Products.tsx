@@ -27,8 +27,8 @@ export default function Products() {
     : 1
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="admin-page products-page">
+      <div className="page-heading flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Məhsullar</h1>
           <p className="mt-1 text-sm text-stone-500">
@@ -37,13 +37,13 @@ export default function Products() {
         </div>
         <Link
           to="/mehsullar/yeni"
-          className="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="page-primary-action rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           Yeni məhsul
         </Link>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="admin-filters mt-4 flex flex-wrap gap-2">
         <input
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1) }}
@@ -72,7 +72,7 @@ export default function Products() {
         </select>
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
+      <div className="responsive-table product-table mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
@@ -86,26 +86,26 @@ export default function Products() {
           <tbody>
             {products.data?.items.map(p => (
               <tr key={p.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
-                <td className="px-3 py-2">
+                <td data-label="Şəkil" className="px-3 py-2">
                   {p.thumbnailUrl ? (
                     <img src={p.thumbnailUrl} alt="" className="h-9 w-9 rounded object-cover" />
                   ) : (
                     <div className="h-9 w-9 rounded bg-stone-100" />
                   )}
                 </td>
-                <td className="px-3 py-2">
+                <td data-label="Məhsul" className="px-3 py-2">
                   <Link to={`/mehsullar/${p.id}`} className="font-medium text-emerald-900 hover:underline">
                     {p.name}
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-stone-500">{p.categoryName}</td>
-                <td className="px-3 py-2 font-mono text-xs text-stone-500">{p.sku ?? '—'}</td>
-                <td className="px-3 py-2"><StatusPill status={p.status} /></td>
+                <td data-label="Kateqoriya" className="px-3 py-2 text-stone-500">{p.categoryName}</td>
+                <td data-label="SKU" className="px-3 py-2 font-mono text-xs text-stone-500">{p.sku ?? '—'}</td>
+                <td data-label="Status" className="px-3 py-2"><StatusPill status={p.status} /></td>
               </tr>
             ))}
             {products.data && products.data.items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-sm text-stone-400">
+                <td data-empty="true" colSpan={5} className="px-3 py-8 text-center text-sm text-stone-400">
                   Məhsul tapılmadı.
                 </td>
               </tr>

@@ -41,7 +41,7 @@ function SpecsEditor({ productId, initial }: { productId: string; initial: SpecI
 
       <div className="mt-3 space-y-2">
         {rows.map((row, i) => (
-          <div key={i} className="flex gap-2">
+          <div key={i} className="spec-row flex gap-2">
             <input
               value={row.label}
               onChange={e => update(i, { label: e.target.value })}
@@ -63,7 +63,7 @@ function SpecsEditor({ productId, initial }: { productId: string; initial: SpecI
         ))}
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="spec-actions mt-3 flex gap-2">
         <button type="button"
           onClick={() => { setRows([...rows, { label: '', value: '' }]); setDirty(true) }}
           className="rounded border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-50">
@@ -393,13 +393,13 @@ export default function ProductEdit() {
   }
 
   return (
-    <div className="max-w-3xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="admin-page product-editor max-w-3xl">
+      <div className="page-heading flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-semibold tracking-tight">
           {isNew ? 'Yeni məhsul' : (product.data?.name ?? 'Məhsul')}
         </h1>
         {!isNew && product.data && (
-          <div className="flex flex-wrap gap-2">
+          <div className="page-actions flex flex-wrap gap-2">
             {product.data.status !== 'Published' && (
               <button type="button" onClick={() => runAction('publish')}
                 className="rounded bg-emerald-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
@@ -426,14 +426,14 @@ export default function ProductEdit() {
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form onSubmit={onSubmit} className="product-main-form mt-6 space-y-4">
         <label className="block">
           <span className="text-sm font-medium text-stone-700">Ad</span>
           <input required value={name} onChange={e => setName(e.target.value)}
             className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
         </label>
 
-        <div className="flex flex-wrap gap-4">
+        <div className="product-field-row flex flex-wrap gap-4">
           <label className="block min-w-56 flex-1">
             <span className="text-sm font-medium text-stone-700">Kateqoriya</span>
             <select required value={categoryId} onChange={e => setCategoryId(e.target.value)}

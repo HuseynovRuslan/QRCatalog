@@ -148,15 +148,15 @@ export default function QrCodes() {
   const totalPages = codes.data ? Math.max(1, Math.ceil(codes.data.total / codes.data.pageSize)) : 1
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="admin-page qr-page">
+      <div className="page-heading flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">QR kodlar</h1>
           <p className="mt-1 text-sm text-stone-500">
             Kod seç → «Çap vərəqi» A4 PDF hazırlayır (3×7 etiket).
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="page-actions flex gap-2">
           <button
             type="button"
             disabled={selected.size === 0 || sheet.isPending}
@@ -175,17 +175,19 @@ export default function QrCodes() {
         </div>
       </div>
 
-      <input
-        value={search}
-        onChange={e => {
-          setSearch(e.target.value)
-          setPage(1)
-        }}
-        placeholder="Kod üzrə axtar: SZ-0001"
-        className="mt-4 w-full max-w-xs rounded border border-stone-300 px-3 py-2 font-mono text-sm uppercase outline-none focus:border-emerald-700"
-      />
+      <div className="admin-filters mt-4">
+        <input
+          value={search}
+          onChange={e => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+          placeholder="Kod üzrə axtar: SZ-0001"
+          className="w-full max-w-xs rounded border border-stone-300 px-3 py-2 font-mono text-sm uppercase outline-none focus:border-emerald-700"
+        />
+      </div>
 
-      <div className="mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
+      <div className="responsive-table qr-table mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
@@ -200,7 +202,7 @@ export default function QrCodes() {
           <tbody>
             {codes.data?.items.map(qr => (
               <tr key={qr.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
-                <td className="px-3 py-2">
+                <td data-label="Seçim" className="px-3 py-2">
                   <input
                     type="checkbox"
                     checked={selected.has(qr.id)}
@@ -208,8 +210,8 @@ export default function QrCodes() {
                     aria-label={`${qr.humanCode} seç`}
                   />
                 </td>
-                <td className="px-3 py-2 font-mono font-medium">{qr.humanCode}</td>
-                <td className="px-3 py-2">
+                <td data-label="Kod" className="px-3 py-2 font-mono font-medium">{qr.humanCode}</td>
+                <td data-label="Hədəf" className="px-3 py-2">
                   {/* Növ MÜTLƏQ göstərilir: kod prefiksi hər ikisində eynidir (SZ-0001
                       məhsul, SZ-0005 kateqoriya ola bilər), ona görə yalnız ad
                       yazılsa hansının nə olduğu bilinmir — etiket çapında bu səhvə aparır. */}
@@ -224,17 +226,17 @@ export default function QrCodes() {
                     ? null
                     : (qr.targetName ?? <span className="text-stone-400">—</span>)}
                 </td>
-                <td className="px-3 py-2">
+                <td data-label="Status" className="px-3 py-2">
                   <StatusPill status={qr.status} />
                 </td>
-                <td className="px-3 py-2">
+                <td data-label="Yükləmə" className="px-3 py-2">
                   <a href={`/api/admin/qrcodes/${qr.id}/image.svg`} target="_blank" rel="noreferrer"
                     className="text-emerald-800 hover:underline">SVG</a>
                   <span className="text-stone-300"> · </span>
                   <a href={`/api/admin/qrcodes/${qr.id}/image.png`}
                     className="text-emerald-800 hover:underline">PNG</a>
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td data-label="Əməliyyat" className="px-3 py-2 text-right">
                   {qr.status === 'Active' ? (
                     <button type="button" onClick={() => retire.mutate(qr.id)}
                       className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100">
@@ -251,7 +253,7 @@ export default function QrCodes() {
             ))}
             {codes.data && codes.data.items.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-sm text-stone-400">
+                <td data-empty="true" colSpan={6} className="px-3 py-8 text-center text-sm text-stone-400">
                   {search ? 'Axtarışa uyğun kod tapılmadı.' : 'Hələ kod yoxdur — «Yeni kod» ilə başlayın.'}
                 </td>
               </tr>

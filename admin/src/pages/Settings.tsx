@@ -23,13 +23,13 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="admin-page settings-page max-w-lg">
       <h1 className="text-lg font-semibold tracking-tight">Parametrlər</h1>
       <p className="mt-1 text-sm text-stone-500">
         Əlaqə məlumatları public məhsul səhifəsindəki düymələrdə görünür.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form onSubmit={onSubmit} className="mobile-form-card settings-form mt-6 space-y-4">
         <label className="block">
           <span className="text-sm font-medium text-stone-700">Müəssisə adı</span>
           <input required value={name} onChange={e => setName(e.target.value)}

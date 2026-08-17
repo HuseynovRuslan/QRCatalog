@@ -66,8 +66,8 @@ export default function Units() {
   const inStock = rows.filter(u => u.siteId === null).length
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="admin-page units-page">
+      <div className="page-heading flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Vahidlər</h1>
           <p className="mt-1 text-sm text-stone-500">
@@ -77,7 +77,7 @@ export default function Units() {
         <button
           type="button"
           onClick={() => setAdding(!adding)}
-          className="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="page-primary-action rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           {adding ? 'Bağla' : 'Vahid əlavə et'}
         </button>
@@ -97,7 +97,7 @@ export default function Units() {
         />
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="admin-filters mt-4 flex flex-wrap gap-2">
         <select
           value={productId}
           onChange={e => setProductId(e.target.value)}
@@ -183,7 +183,7 @@ export default function Units() {
         )}
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
+      <div className="responsive-table units-table mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
@@ -204,9 +204,9 @@ export default function Units() {
                   selected === unit.id ? 'bg-emerald-50/60' : ''
                 }`}
               >
-                <td className="px-3 py-2 font-mono font-medium">{unit.code}</td>
-                <td className="px-3 py-2 text-stone-600">{unit.productName}</td>
-                <td className="px-3 py-2 text-stone-600">
+                <td data-label="Kod" className="px-3 py-2 font-mono font-medium">{unit.code}</td>
+                <td data-label="Model" className="px-3 py-2 text-stone-600">{unit.productName}</td>
+                <td data-label="Obyekt" className="px-3 py-2 text-stone-600">
                   {unit.siteName ?? <span className="text-stone-400">anbarda</span>}
                   {unit.siteName && !unit.hasOwnPosition && (
                     <span className="block text-xs text-stone-400">
@@ -214,7 +214,7 @@ export default function Units() {
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2">
+                <td data-label="Status" className="px-3 py-2">
                   <select
                     value={unit.status}
                     onClick={event => event.stopPropagation()}
@@ -238,10 +238,10 @@ export default function Units() {
                     ))}
                   </select>
                 </td>
-                <td className="px-3 py-2 text-stone-600 tabular-nums">
+                <td data-label="Quraşdırılıb" className="px-3 py-2 text-stone-600 tabular-nums">
                   {unit.installedOn ?? '—'}
                 </td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
+                <td data-label="Əməliyyatlar" className="mobile-actions px-3 py-2 text-right whitespace-nowrap">
                   <button
                     type="button"
                     onClick={event => {
@@ -267,7 +267,7 @@ export default function Units() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-stone-400">
+                <td data-empty="true" colSpan={6} className="px-3 py-6 text-center text-stone-400">
                   Vahid yoxdur. «Vahid əlavə et» ilə başlayın.
                 </td>
               </tr>
@@ -321,7 +321,7 @@ function BulkForm({
           spreadMeters: spread,
         })
       }}
-      className="mt-4 rounded-lg border border-stone-200 bg-white p-4"
+      className="mobile-form-card unit-create-form mt-4 rounded-lg border border-stone-200 bg-white p-4"
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block">

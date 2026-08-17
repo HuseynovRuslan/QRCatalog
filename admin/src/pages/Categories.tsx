@@ -155,7 +155,7 @@ function CategoryRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded border border-stone-200 bg-white px-3 py-2 ${
+      className={`category-row flex items-center gap-2 rounded border border-stone-200 bg-white px-3 py-2 ${
         isDragging ? 'opacity-60 shadow-md' : ''
       }`}
     >
@@ -177,27 +177,29 @@ function CategoryRow({
       {childCount > 0 && (
         <span className="text-xs text-stone-400">{childCount} alt</span>
       )}
-      <button
-        type="button"
-        onClick={onAddChild}
-        className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
-      >
-        + alt
-      </button>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
-      >
-        Redaktə
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-      >
-        Sil
-      </button>
+      <div className="category-row-actions">
+        <button
+          type="button"
+          onClick={onAddChild}
+          className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
+        >
+          + alt
+        </button>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
+        >
+          Redaktə
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+        >
+          Sil
+        </button>
+      </div>
     </div>
   )
 }
@@ -246,7 +248,7 @@ function CategoryLevel({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <div className="space-y-1" style={{ marginLeft: depth * 24 }}>
+        <div className="category-level space-y-1" style={{ marginLeft: depth * 24 }}>
           {ordered.map(category => (
             <div key={category.id}>
               <CategoryRow
@@ -290,8 +292,8 @@ export default function Categories() {
   const [editor, setEditor] = useState<EditorState | null>(null)
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="admin-page categories-page">
+      <div className="page-heading flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Kateqoriyalar</h1>
           <p className="mt-1 text-sm text-stone-500">
@@ -301,7 +303,7 @@ export default function Categories() {
         <button
           type="button"
           onClick={() => setEditor({ mode: 'create', parentId: null })}
-          className="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="page-primary-action rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           Yeni kateqoriya
         </button>

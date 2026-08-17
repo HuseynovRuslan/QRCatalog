@@ -33,26 +33,26 @@ function InquiryRow({ inquiry }: { inquiry: Inquiry }) {
         onClick={() => setOpen(o => !o)}
         className="cursor-pointer border-b border-stone-100 last:border-0 hover:bg-stone-50"
       >
-        <td className="px-3 py-2 font-medium">{inquiry.name}</td>
-        <td className="px-3 py-2 font-mono text-xs">{inquiry.phone}</td>
-        <td className="px-3 py-2 text-stone-500">
+        <td data-label="Müştəri" className="px-3 py-2 font-medium">{inquiry.name}</td>
+        <td data-label="Telefon" className="px-3 py-2 font-mono text-xs">{inquiry.phone}</td>
+        <td data-label="Mənbə" className="px-3 py-2 text-stone-500">
           {inquiry.productName ?? <span className="text-stone-300">ümumi</span>}
           {inquiry.humanCode && (
             <span className="ml-1 font-mono text-xs text-emerald-800">{inquiry.humanCode}</span>
           )}
         </td>
-        <td className="px-3 py-2">
+        <td data-label="Status" className="px-3 py-2">
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[inquiry.status]}`}>
             {STATUS_LABELS[inquiry.status]}
           </span>
         </td>
-        <td className="px-3 py-2 text-xs tabular-nums text-stone-400">
+        <td data-label="Tarix" className="px-3 py-2 text-xs tabular-nums text-stone-400">
           {new Date(inquiry.createdAtUtc).toLocaleString('az')}
         </td>
       </tr>
       {open && (
-        <tr className="border-b border-stone-100 bg-stone-50/60">
-          <td colSpan={5} className="px-4 py-3">
+        <tr className="inquiry-detail-row border-b border-stone-100 bg-stone-50/60">
+          <td data-detail="true" colSpan={5} className="px-4 py-3">
             {inquiry.message && (
               <p className="whitespace-pre-wrap rounded bg-white p-3 text-sm text-stone-700">
                 {inquiry.message}
@@ -115,25 +115,27 @@ export default function Inquiries() {
     : 1
 
   return (
-    <div>
+    <div className="admin-page inquiries-page">
       <h1 className="text-lg font-semibold tracking-tight">Müraciətlər</h1>
       <p className="mt-1 text-sm text-stone-500">
         Public saytdakı sorğu formalarından gələnlər — mənbəyi (məhsul, QR kod) ilə birlikdə.
       </p>
 
-      <select
-        value={status}
-        onChange={e => { setStatus(e.target.value); setPage(1) }}
-        className="mt-4 rounded border border-stone-300 px-3 py-2 text-sm"
-      >
-        <option value="">Bütün statuslar</option>
-        <option value="new">Yeni</option>
-        <option value="inprogress">Baxılır</option>
-        <option value="answered">Cavablandı</option>
-        <option value="closed">Bağlandı</option>
-      </select>
+      <div className="admin-filters mt-4">
+        <select
+          value={status}
+          onChange={e => { setStatus(e.target.value); setPage(1) }}
+          className="rounded border border-stone-300 px-3 py-2 text-sm"
+        >
+          <option value="">Bütün statuslar</option>
+          <option value="new">Yeni</option>
+          <option value="inprogress">Baxılır</option>
+          <option value="answered">Cavablandı</option>
+          <option value="closed">Bağlandı</option>
+        </select>
+      </div>
 
-      <div className="mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
+      <div className="responsive-table inquiry-table mt-4 overflow-x-auto rounded-lg border border-stone-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
@@ -150,7 +152,7 @@ export default function Inquiries() {
             ))}
             {inquiries.data && inquiries.data.items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-sm text-stone-400">
+                <td data-empty="true" colSpan={5} className="px-3 py-8 text-center text-sm text-stone-400">
                   Müraciət yoxdur.
                 </td>
               </tr>

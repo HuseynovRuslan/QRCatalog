@@ -115,8 +115,8 @@ export default function Sites() {
   const busy = create.isPending || update.isPending
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="admin-page sites-page">
+      <div className="page-heading flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Obyektlər</h1>
           <p className="mt-1 text-sm text-stone-500">
@@ -126,13 +126,13 @@ export default function Sites() {
         <button
           type="button"
           onClick={startCreate}
-          className="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="page-primary-action rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           Yeni obyekt
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="admin-filters mt-4 flex flex-wrap gap-2">
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -179,7 +179,7 @@ export default function Sites() {
       </div>
 
       {form && (
-        <form onSubmit={onSubmit} className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
+        <form onSubmit={onSubmit} className="mobile-form-card mt-4 rounded-lg border border-stone-200 bg-white p-4">
           <h2 className="text-base font-semibold">
             {form.id ? 'Obyekti redaktə et' : 'Yeni obyekt'}
           </h2>
@@ -300,7 +300,7 @@ export default function Sites() {
         </form>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-stone-200 bg-white">
+      <div className="responsive-table sites-table mt-6 overflow-x-auto rounded-lg border border-stone-200 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
@@ -320,16 +320,16 @@ export default function Sites() {
                   selectedId === site.id ? 'bg-emerald-50/60' : ''
                 }`}
               >
-                <td className="px-3 py-2">
+                <td data-label="Obyekt" className="px-3 py-2">
                   <span className="font-medium">{site.name}</span>
                   {site.address && (
                     <span className="block text-xs text-stone-400">{site.address}</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-stone-600">
+                <td data-label="Növ" className="px-3 py-2 text-stone-600">
                   {SITE_KINDS.find(k => k.value === site.kind)?.label ?? site.kind}
                 </td>
-                <td className="px-3 py-2">
+                <td data-label="Vahidlər" className="px-3 py-2">
                   {site.items.length === 0 ? (
                     <span className="text-stone-400">—</span>
                   ) : (
@@ -341,13 +341,13 @@ export default function Sites() {
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-stone-600">
+                <td data-label="Əlaqə" className="px-3 py-2 text-stone-600">
                   {site.contactName ?? '—'}
                   {site.contactPhone && (
                     <span className="block text-xs text-stone-400">{site.contactPhone}</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
+                <td data-label="Əməliyyatlar" className="mobile-actions px-3 py-2 text-right whitespace-nowrap">
                   <Link
                     to={`/vahidler?obyekt=${site.id}`}
                     onClick={event => event.stopPropagation()}
@@ -385,7 +385,7 @@ export default function Sites() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-stone-400">
+                <td data-empty="true" colSpan={5} className="px-3 py-6 text-center text-stone-400">
                   Obyekt yoxdur. «Yeni obyekt» ilə başlayın.
                 </td>
               </tr>
