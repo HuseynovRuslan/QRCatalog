@@ -5,6 +5,7 @@ import Categories from './pages/Categories'
 import Products from './pages/Products'
 import ProductEdit from './pages/ProductEdit'
 import QrCodes from './pages/QrCodes'
+import Sites from './pages/Sites'
 import Settings from './pages/Settings'
 import Inquiries from './pages/Inquiries'
 import RequireAuth from './components/RequireAuth'
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="mehsullar" element={<Products />} />
         <Route path="mehsullar/:id" element={<ProductEdit />} />
         <Route path="qr" element={<QrCodes />} />
+        <Route path="obyektler" element={<Sites />} />
         <Route path="muracietler" element={<Inquiries />} />
         <Route path="parametrler" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />

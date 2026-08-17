@@ -145,6 +145,48 @@ PRODUCTS = [
      "published"),
 ]
 
+# Quraşdırılma obyektləri — xəritə üçün. Koordinatlar real yerlərə yaxındır ki, xəritədə
+# nöqtələr Azərbaycanın üstünə düşsün; təsadüfi rəqəm okeanın ortasında görünərdi.
+# (ad, növ, ünvan, enlik, uzunluq, əlaqədar şəxs, telefon, [(SKU, ədəd)…])
+SITES = [
+    ("Dədə Qorqud parkı", "Park", "Bakı, Nərimanov r.", 40.4093, 49.8671,
+     "Park idarəsi", "+994 12 555 41 22",
+     [("SK-PR-3N", 24), ("SK-AR-150", 10), ("MS-PK-DS", 4)]),
+    ("Dənizkənarı Milli Park", "Park", "Bakı, Bulvar", 40.3690, 49.8420,
+     "Abşeron İH", "+994 12 493 18 07",
+     [("SK-PR-3N", 40), ("SK-IP-AK", 16)]),
+    ("Bilgəh çimərlik hoteli", "Hotel", "Bakı, Bilgəh q.", 40.5772, 49.9410,
+     "Rəşad Səfərov", "+994 50 411 26 33",
+     [("SZ-AK-KL", 45), ("SZ-AK-YS", 12), ("SZ-IK-KL", 6)]),
+    ("Sea Breeze rezidensiya", "Residential", "Bakı, Nardaran", 40.6220, 49.9640,
+     "Texniki xidmət", "+994 55 700 19 84",
+     [("SZ-TS-AC", 60), ("MS-BG-180", 8), ("ST-AK-QT", 48)]),
+    ("Qəbələ dağ oteli", "Hotel", "Qəbələ, Həsənqaya", 40.9860, 47.8460,
+     "Nurlan Əliyev", "+994 55 604 71 09",
+     [("SZ-AK-KL", 18), ("SL-BG-3N", 4), ("SK-IP-AK", 8)]),
+    ("Şəki Karvansaray həyəti", "Cafe", "Şəki, Yuxarı Baş", 41.1975, 47.1900,
+     "Elçin Hüseynov", "+994 51 322 40 15",
+     [("SK-IP-AK", 12), ("MS-BG-180", 6), ("ST-AK-QT", 24)]),
+    ("Naftalan sanatoriyası", "Hotel", "Naftalan", 40.5070, 46.8210,
+     "Baş inzibatçı", "+994 22 255 30 41",
+     [("SZ-AK-YS", 30), ("SL-AS-120", 6)]),
+    ("Gəncə Xan bağı", "Park", "Gəncə, Nizami r.", 40.6828, 46.3606,
+     "Gəncə İH", "+994 22 256 77 12",
+     [("SK-PR-3N", 30), ("SK-SD-QT", 6)]),
+    ("Lənkəran çay evi", "Cafe", "Lənkəran, mərkəz", 38.7530, 48.8510,
+     "Vüqar Məmmədli", "+994 70 818 55 27",
+     [("SK-AR-150", 14), ("MS-PK-DS", 6)]),
+    ("Quba uşaq bağçası №5", "School", "Quba, Ardıc küç.", 41.3620, 48.5130,
+     "Metodist", "+994 23 335 12 09",
+     [("SK-IP-AK", 8), ("SL-AS-120", 4)]),
+    ("Astara çimərlik zonası", "Beach", "Astara, sahil", 38.4560, 48.8720,
+     "Sahil xidməti", "+994 25 251 60 33",
+     [("SZ-TS-AC", 35), ("SZ-IK-KL", 8)]),
+    ("Xırdalan Olimpiya kompleksi", "Other", "Abşeron, Xırdalan", 40.4530, 49.7560,
+     "İdarəçi", "+994 12 342 88 50",
+     [("SK-PR-3N", 20), ("ST-AK-QT", 30)]),
+]
+
 INQUIRIES = [
     ("Elçin Məmmədov", "+994 50 318 22 47",
      "Salam, 40 ədəd akasiya şezlonq lazımdır. Hovuz üçün. Qiymət və çatdırılma müddəti?",
@@ -307,6 +349,20 @@ def seed(client):
     codes.append(category_code["humanCode"])
     print(f"  {len(codes)} kod: {', '.join(codes[:6])}…")
 
+    print("Obyektlər (xəritə)…")
+    installed = 0
+    for name, kind, address, lat, lng, contact, phone, lines in SITES:
+        site = client.send("POST", "/api/admin/sites", {
+            "name": name, "kind": kind, "latitude": lat, "longitude": lng,
+            "address": address, "contactName": contact, "contactPhone": phone, "note": None,
+        })
+        items = [{"productId": product_ids[sku], "quantity": qty, "installedOn": None}
+                 for sku, qty in lines if sku in product_ids]
+        client.send("PUT", f"/api/admin/sites/{site['id']}/items", {"items": items})
+        installed += sum(qty for _sku, qty in lines)
+        print(f"  {name} — {sum(q for _s, q in lines)} ədəd")
+    print(f"  {len(SITES)} obyekt, {installed} ədəd quraşdırılmış məhsul")
+
     print("Müraciətlər…")
     slugs = {}
     for sku, product_id in product_ids.items():
@@ -370,6 +426,9 @@ def summary(client):
     print("  ən çox skan olunanlar:")
     for row in dashboard["topProducts"]:
         print(f"    {row['count']:>4}  {row['name']}")
+    sites = client.get("/api/admin/sites")
+    print(f"  obyekt: {len(sites)} "
+          f"({sum(site['totalQuantity'] for site in sites)} ədəd quraşdırılmış məhsul)")
     print("\nŞəkilləri SKU adı ilə saxlayıb toplu yükləyin:")
     print("  " + ", ".join(f"{sku}.png" for _c, _n, sku, *_r in PRODUCTS[:4]) + " …")
     print("  python3 ops/upload-images.py <qovluq>")

@@ -24,6 +24,7 @@ public sealed class AppDbContext
     public DbSet<QrCode> QrCodes => Set<QrCode>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Inquiry> Inquiries => Set<Inquiry>();
+    public DbSet<Site> Sites => Set<Site>();
     public DbSet<ScanEvent> ScanEvents => Set<ScanEvent>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
@@ -172,6 +173,39 @@ public sealed class AppDbContext
 
             b.HasOne<QrCode>().WithMany()
                 .HasForeignKey(s => s.QrCodeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Site>(b =>
+        {
+            b.Property(s => s.Name).HasMaxLength(200).IsRequired();
+            b.Property(s => s.Address).HasMaxLength(300);
+            b.Property(s => s.ContactName).HasMaxLength(200);
+            b.Property(s => s.ContactPhone).HasMaxLength(40);
+            b.Property(s => s.Note).HasMaxLength(2000);
+
+            b.HasIndex(s => new { s.CompanyId, s.Name });
+
+            b.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(s => s.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasMany(s => s.Items)
+                .WithOne()
+                .HasForeignKey(i => i.SiteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SiteItem>(b =>
+        {
+            b.HasIndex(i => new { i.SiteId, i.ProductId });
+
+            // Obyektdə işlənən məhsul silinə bilməz — məhsul onsuz da silinmir,
+            // arxivləşir; Restrict bu qaydanı bazada da təsbit edir.
+            b.HasOne<Product>()
+                .WithMany()
+                .HasForeignKey(i => i.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<AuditEntry>(b =>

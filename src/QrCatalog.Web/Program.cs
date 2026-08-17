@@ -180,6 +180,7 @@ try
     app.MapQrCodeEndpoints();
     app.MapSettingsEndpoints();
     app.MapInquiryEndpoints();
+    app.MapSiteEndpoints();
     app.MapStatsEndpoints();
     app.MapAuditEndpoints();
     app.MapHealthChecks("/health");

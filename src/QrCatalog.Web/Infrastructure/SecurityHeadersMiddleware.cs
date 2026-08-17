@@ -15,7 +15,11 @@ public sealed class SecurityHeadersMiddleware
     {
         _next = next;
 
-        var imgSources = "'self' data:";
+        // Obyekt xəritəsi (admin) OpenStreetMap tile-larını şəkil kimi yükləyir. Bu host
+        // icazəsi olmasa xəritə SƏSSİZCƏ boş boz sahə kimi çıxır — konsolda CSP xətası
+        // qalır, istifadəçi isə "xəritə işləmir" deyir. Leaflet-in özü bundle-dadır,
+        // ona görə script-src toxunulmur.
+        var imgSources = "'self' data: blob: https://*.tile.openstreetmap.org";
         var publicBase = config["Storage:S3:PublicBaseUrl"];
         if (Uri.TryCreate(publicBase, UriKind.Absolute, out var uri))
             imgSources += $" {uri.Scheme}://{uri.Host}";
