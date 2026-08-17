@@ -27,12 +27,7 @@ public static class StatsEndpoints
                 .FirstOrDefaultAsync();
 
             if (qr is not null)
-            {
-                queue.TryEnqueue(new PendingScan(
-                    qr.CompanyId, qr.Id,
-                    DeviceKindParser.Parse(http.Request.Headers.UserAgent),
-                    FirstLanguage(http.Request.Headers.AcceptLanguage)));
-            }
+                ScanRecorder.Record(queue, http, qr.CompanyId, qr.Id);
 
             return Results.NoContent(); // tapılıb-tapılmamasından asılı olmayaraq eyni cavab
         })
@@ -157,12 +152,6 @@ public static class StatsEndpoints
         .RequireAuthorization(Policies.CanView);
     }
 
-    private static string? FirstLanguage(string? acceptLanguage)
-    {
-        if (string.IsNullOrWhiteSpace(acceptLanguage)) return null;
-        var first = acceptLanguage.Split(',')[0].Split(';')[0].Trim();
-        return first.Length is > 0 and <= 10 ? first : null;
-    }
 }
 
 public sealed record ScanBeaconRequest(string Token);

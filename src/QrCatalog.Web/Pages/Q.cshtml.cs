@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using QrCatalog.Application.Abstractions;
 using QrCatalog.Domain.Entities;
 using QrCatalog.Infrastructure.Persistence;
+using QrCatalog.Infrastructure.Scans;
 using QrCatalog.Web.Infrastructure;
 
 namespace QrCatalog.Web.Pages;
@@ -30,11 +31,13 @@ public sealed class QModel : PageModel
 {
     private readonly AppDbContext _db;
     private readonly IFileStorage _storage;
+    private readonly ScanEventQueue _scans;
 
-    public QModel(AppDbContext db, IFileStorage storage)
+    public QModel(AppDbContext db, IFileStorage storage, ScanEventQueue scans)
     {
         _db = db;
         _storage = storage;
+        _scans = scans;
     }
 
     public QState State { get; private set; } = QState.NotFound;
@@ -93,6 +96,11 @@ public sealed class QModel : PageModel
                     State = QState.Archived;
                     return Page();
                 }
+
+                // Skan BURADA qeyd olunur, beacon ilə yox: qonaq kataloq səhifəsinə keçir və
+                // orada token daşınmır. 302 cavabı output-cache-lənmədiyi üçün (yalnız 200
+                // keşlənir) bu qol hər skanda işləyir — sayğac tam olur. Bax: ScanRecorder.
+                ScanRecorder.Record(_scans, HttpContext, qrCode.CompanyId, qrCode.Id);
                 return Redirect($"/katalog/{categorySlug}");
 
             case QrTargetType.Product:
