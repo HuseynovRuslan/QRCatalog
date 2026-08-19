@@ -90,6 +90,20 @@ public static class AuthEndpoints
                 ? null
                 : await userManager.Users.FirstOrDefaultAsync(u => u.AccessCodeHash == hash);
 
+            // Köhnə saltsız hash-lə saxlanmış kodlar: uyğun gəlirsə giriş verilir və
+            // hash SƏSSİZCƏ HMAC-a yüksəldilir. Bunsuz alqoritm dəyişikliyi bütün
+            // işçiləri eyni anda bayırda qoyardı — parolunu bilməyən adam üçün bu,
+            // sistemə girişin tam itməsi deməkdir.
+            if (user is null && UserEndpoints.LegacyHashAccessCode(request.Code) is { } legacy)
+            {
+                user = await userManager.Users.FirstOrDefaultAsync(u => u.AccessCodeHash == legacy);
+                if (user is not null && hash is not null)
+                {
+                    user.AccessCodeHash = hash;
+                    await userManager.UpdateAsync(user);
+                }
+            }
+
             if (user is null)
             {
                 throttle.RecordFailure(ip);

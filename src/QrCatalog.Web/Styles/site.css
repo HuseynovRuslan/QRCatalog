@@ -2616,3 +2616,342 @@ a.staff-site__name {
         font-size: 38px;
     }
 }
+
+/* ── NÜSXƏ EKRANI: əvvəl kimlik, sonra YER, sonra rəqəmlər ────────────────
+   Model ekranında iri rəqəm birinci gəlir (rəhbərlik sualı: «neçə ədədimiz var»).
+   Nüsxə ekranında isə birinci yer gəlir — sahədə duran adamın sualı budur. */
+.staff-alert {
+    margin: 0 0 18px;
+    border: 1px solid rgba(173, 108, 49, .45);
+    border-left-width: 4px;
+    border-radius: 10px;
+    background: rgba(200, 136, 72, .12);
+    padding: 12px 14px;
+    color: #7d4a17;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.staff-unit-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+}
+
+.staff-unit-head__img {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    border-radius: 11px;
+    background: var(--cream-200);
+    object-fit: cover;
+}
+
+.staff-unit-head__code {
+    margin: 0;
+    color: var(--honey-600);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+.staff-unit-head h1 {
+    margin: 3px 0 8px;
+    color: var(--forest-950);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+}
+
+.staff-status {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.staff-status--installed { background: rgba(47, 107, 86, .14); color: var(--forest-800); }
+.staff-status--instock   { background: var(--cream-200);       color: #5c655e; }
+.staff-status--inrepair  { background: rgba(200, 136, 72, .18); color: var(--honey-600); }
+.staff-status--removed   { background: #eee9e2;                color: #8b857c; }
+
+/* Yer bloku — ekranın əsas cavabı */
+.staff-where {
+    margin-top: 20px;
+    border-radius: 16px;
+    background: var(--forest-900);
+    padding: 18px 18px 20px;
+    color: #fffdf7;
+}
+
+.staff-where h2 {
+    margin: 0 0 10px;
+    color: rgba(255, 255, 255, .5);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.staff-where__name {
+    margin: 0;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.02em;
+}
+
+.staff-where__meta {
+    margin: 5px 0 0;
+    color: rgba(255, 255, 255, .62);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.staff-where__coords {
+    margin: 12px 0 16px;
+    color: rgba(255, 255, 255, .8);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+}
+
+.staff-where__coords span {
+    display: block;
+    margin-top: 3px;
+    color: rgba(255, 255, 255, .42);
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+}
+
+.staff-where .staff-empty {
+    border-color: rgba(255, 255, 255, .25);
+    color: rgba(255, 255, 255, .72);
+}
+
+.staff-btn--wide {
+    width: 100%;
+    border-color: var(--sand-300);
+    background: var(--sand-300);
+    color: var(--forest-950);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.staff-maplinks {
+    margin: 10px 0 0;
+    color: rgba(255, 255, 255, .35);
+    font-size: 12px;
+    text-align: center;
+}
+
+.staff-maplinks a {
+    color: rgba(255, 255, 255, .72);
+    padding: 6px 4px;
+}
+
+.staff-here {
+    margin-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, .14);
+    padding-top: 12px;
+}
+
+.staff-here__btn {
+    border: 0;
+    background: none;
+    padding: 8px 0;
+    color: var(--sand-300);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.staff-here__out {
+    margin: 4px 0 0;
+    color: rgba(255, 255, 255, .68);
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.staff-here__out.is-ok   { color: #bfe3c8; }
+.staff-here__out.is-warn { color: #f0c99a; }
+
+/* Faktlar — tarix, zəmanət, model kodu */
+.staff-facts {
+    margin-top: 18px;
+}
+
+.staff-facts dl {
+    display: grid;
+    gap: 1px;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--line);
+    overflow: hidden;
+}
+
+.staff-facts div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    background: #fff;
+    padding: 11px 15px;
+}
+
+.staff-facts dt {
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.staff-facts dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: right;
+}
+
+.staff-facts .is-expired dd { color: var(--honey-600); }
+
+.staff-note--boxed {
+    margin: 14px 0 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px 14px;
+    color: #5c655e;
+    font-size: 12.5px;
+}
+
+/* Əlaqə — sahədə ən çox işlənən düymə */
+.staff-contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: #fff;
+    padding: 13px 15px;
+}
+
+.staff-contact span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.staff-contact strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.staff-btn--call {
+    flex: 0 0 auto;
+    min-height: 44px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 13px;
+}
+
+/* Bir toxunuş arxasındakı bölmələr */
+.staff-more {
+    display: grid;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.staff-more details {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    padding: 0 15px;
+}
+
+.staff-more summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 0;
+    cursor: pointer;
+    color: var(--forest-950);
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.staff-more summary span {
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.staff-more__grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 26px;
+    margin: 0 0 4px;
+}
+
+.staff-more__grid div {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.staff-more__grid dt {
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.staff-more__grid dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.staff-codes {
+    margin: 0 0 13px;
+    color: #5a635d;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.9;
+    word-break: break-word;
+}
+
+.staff-minilist {
+    margin: 0 0 13px;
+    padding: 0;
+    list-style: none;
+}
+
+.staff-minilist li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 5px 0;
+    font-size: 13px;
+}
+
+.staff-minilist b {
+    font-variant-numeric: tabular-nums;
+}
+
+.staff-more .staff-hint {
+    margin: 0 0 13px;
+}

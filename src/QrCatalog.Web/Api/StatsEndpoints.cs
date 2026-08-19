@@ -45,16 +45,41 @@ public static class StatsEndpoints
             var newInquiries = await db.Inquiries.CountAsync(i => i.Status == InquiryStatus.New);
             var scans30d = await db.ScanEvents.CountAsync(s => s.OccurredAtUtc >= since);
 
-            // Ən çox skan olunan məhsullar (30 gün)
-            var topRaw = await db.ScanEvents
+            // Ən çox skan olunan məhsullar (30 gün).
+            //
+            // Vahid kodları da bura düşür: etiket nüsxəyə bağlıdır, amma müştəri
+            // marağı MODELƏ aiddir. Bu qol olmasa vahid etiketləri işə düşən kimi
+            // statistika boşalar — skanlar sayılar, «hansı model» sütunu isə boş
+            // qalar və rəhbərlik hesabatın sındığını düşünər.
+            var scanTargets = await db.ScanEvents
                 .Where(s => s.OccurredAtUtc >= since)
                 .Join(db.QrCodes, s => s.QrCodeId, q => q.Id, (s, q) => q)
-                .Where(q => q.TargetType == QrTargetType.Product && q.TargetId != null)
-                .GroupBy(q => q.TargetId!.Value)
+                .Where(q => q.TargetId != null &&
+                            (q.TargetType == QrTargetType.Product ||
+                             q.TargetType == QrTargetType.Unit))
+                .Select(q => new { q.TargetType, TargetId = q.TargetId!.Value })
+                .ToListAsync();
+
+            var unitTargetIds = scanTargets
+                .Where(t => t.TargetType == QrTargetType.Unit)
+                .Select(t => t.TargetId).Distinct().ToList();
+            var unitToProduct = unitTargetIds.Count == 0
+                ? []
+                : await db.SiteUnits
+                    .Where(u => unitTargetIds.Contains(u.Id))
+                    .Select(u => new { u.Id, u.ProductId })
+                    .ToDictionaryAsync(u => u.Id, u => u.ProductId);
+
+            var topRaw = scanTargets
+                .Select(t => t.TargetType == QrTargetType.Unit
+                    ? unitToProduct.GetValueOrDefault(t.TargetId)
+                    : t.TargetId)
+                .Where(id => id != Guid.Empty)
+                .GroupBy(id => id)
                 .Select(g => new { ProductId = g.Key, Count = g.Count() })
                 .OrderByDescending(x => x.Count)
                 .Take(5)
-                .ToListAsync();
+                .ToList();
 
             var topIds = topRaw.Select(t => t.ProductId).ToList();
             var names = await db.Products
@@ -116,6 +141,18 @@ public static class StatsEndpoints
             var productIds = codes
                 .Where(c => c.TargetType == QrTargetType.Product && c.TargetId != null)
                 .Select(c => c.TargetId!.Value).Distinct().ToList();
+
+            // Vahid kodlarında ad sütunu nüsxə kodudur («SK-PR-3N/007») — sahədə
+            // işə yarayan identifikator budur, model adı deyil.
+            var unitIds = codes
+                .Where(c => c.TargetType == QrTargetType.Unit && c.TargetId != null)
+                .Select(c => c.TargetId!.Value).Distinct().ToList();
+            var unitCodes = unitIds.Count == 0
+                ? []
+                : await db.SiteUnits
+                    .Where(u => unitIds.Contains(u.Id))
+                    .Select(u => new { u.Id, u.Code })
+                    .ToDictionaryAsync(u => u.Id, u => u.Code);
             var productNames = productIds.Count == 0
                 ? []
                 : await db.Products
@@ -132,10 +169,12 @@ public static class StatsEndpoints
             var byCodeDto = byCode.Select(c =>
             {
                 var info = codeInfo.GetValueOrDefault(c.QrCodeId);
-                return new CodeCountDto(
-                    info?.HumanCode ?? "?",
-                    info?.TargetId is { } tid ? productNames.GetValueOrDefault(tid) : null,
-                    c.Count);
+                var label = info?.TargetId is { } tid
+                    ? (info.TargetType == QrTargetType.Unit
+                        ? unitCodes.GetValueOrDefault(tid)
+                        : productNames.GetValueOrDefault(tid))
+                    : null;
+                return new CodeCountDto(info?.HumanCode ?? "?", label, c.Count);
             }).ToList();
 
             // Heç vaxt skan olunmayan aktiv kodlar — etiket vurulmayıb, ya görünmür

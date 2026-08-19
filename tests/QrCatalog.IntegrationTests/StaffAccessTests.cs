@@ -232,6 +232,125 @@ public sealed class StaffAccessTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UnitQr_AnswersWhichBenchAndWhere()
+    {
+        if (_factory is null) return; // baza yoxdur
+
+        var admin = await LoginAsync();
+
+        var category = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/categories",
+            new { name = "Skamyalar", codePrefix = "SK" })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+        var product = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/products",
+            new { name = "Park skamyası", categoryId = category.Id, sku = "SK-PR-3N" })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+        await SendJsonAsync(admin, HttpMethod.Post, $"/api/admin/products/{product.Id}/publish");
+
+        var site = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/sites",
+            new
+            {
+                name = "Gəncə Xan bağı", kind = "park",
+                latitude = 40.6828, longitude = 46.3606,
+                address = "Gəncə, Nizami r.",
+                contactName = "Gəncə İH", contactPhone = "+994222567712",
+            })).Content.ReadFromJsonAsync<IdResponse>())!;
+
+        await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/units/bulk",
+            new { productId = product.Id, siteId = site.Id, quantity = 3, installedOn = "2025-05-04" });
+
+        // Toplu kod: hər nüsxəyə öz QR-ı
+        var bulkRes = await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/qrcodes/units/bulk",
+            new { productId = product.Id });
+        Assert.True(bulkRes.IsSuccessStatusCode,
+            $"Toplu kod: {(int)bulkRes.StatusCode} - {await bulkRes.Content.ReadAsStringAsync()}");
+        var bulk = (await bulkRes.Content.ReadFromJsonAsync<BulkCodesResponse>())!;
+        Assert.Equal(3, bulk.Created);
+
+        // Təkrar çağırış YENİ kod yaratmamalıdır — əməliyyat təkrarlana bilən olmalıdır
+        var again = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/qrcodes/units/bulk",
+            new { productId = product.Id })).Content.ReadFromJsonAsync<BulkCodesResponse>())!;
+        Assert.Equal(0, again.Created);
+
+        var codes = await admin.GetFromJsonAsync<PagedQrResponse>("/api/admin/qrcodes?pageSize=50");
+        var unitCodes = codes!.Items.Where(c => c.TargetType == "Unit").ToList();
+        Assert.Equal(3, unitCodes.Count);
+        // Etiketdə çap olunan ad NÜSXƏ kodudur — sahədə işə yarayan identifikator budur
+        Assert.All(unitCodes, c => Assert.StartsWith("SK-PR-3N/", c.TargetName));
+
+        var first = unitCodes.OrderBy(c => c.TargetName).First();
+
+        // 1. İŞÇİ: hansı nüsxə, harada, nə vaxtdan — ekranın bütün cavabı
+        var staffPage = await admin.GetAsync($"/i/{first.Token}");
+        Assert.Equal(HttpStatusCode.OK, staffPage.StatusCode);
+        var html = await staffPage.Content.ReadAsStringAsync();
+
+        Assert.Contains(first.TargetName!, html);      // nüsxə kodu
+        Assert.Contains("Gəncə Xan bağı", html);       // obyekt
+        Assert.Contains("Gəncə, Nizami r.", html);     // ünvan
+        Assert.Contains("40.6828", html);              // koordinat
+        Assert.Contains("Yol göstər", html);           // naviqasiya
+        // Razor «+» işarəsini &#x2B; kimi kodlayır (köhnə UTF-7 hücumlarına qarşı),
+        // ona görə rəqəmlərə baxılır — «tel:» linki brauzerdə düzgün açılır.
+        Assert.Contains("staff-contact", html);
+        Assert.Contains("994222567712", html);
+        Assert.Contains("04.05.2025", html);           // quraşdırma tarixi
+        // Digər iki nüsxə «bu obyektdə eyni modeldən» bölməsində
+        Assert.Contains("Bu obyektdə eyni modeldən", html);
+
+        // 2. QONAQ: eyni etiket müştəri səhifəsini açır, daxili məlumat SIZMIR
+        var guest = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        var guestPage = await guest.GetAsync($"/q/{first.Token}");
+        Assert.Equal(HttpStatusCode.OK, guestPage.StatusCode);
+        var guestHtml = await guestPage.Content.ReadAsStringAsync();
+        Assert.Contains("Park skamyası", guestHtml);
+        Assert.DoesNotContain("Gəncə Xan bağı", guestHtml);   // obyekt adı daxilidir
+        Assert.DoesNotContain(first.TargetName!, guestHtml);  // nüsxə kodu da
+
+        // 3. İşçi skanı /q/ üzərindən də nüsxə ekranına gedir
+        var staffScan = await admin.GetAsync($"/q/{first.Token}");
+        Assert.Equal(HttpStatusCode.Redirect, staffScan.StatusCode);
+        Assert.Equal($"/i/{first.Token}", staffScan.Headers.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task UnitCodes_StayUnique_AcrossProductsWithSamePrefix()
+    {
+        if (_factory is null) return; // baza yoxdur
+
+        var admin = await LoginAsync();
+        var category = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/categories",
+            new { name = "Stullar", codePrefix = "ST" })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+
+        // İKİ məhsul, hər ikisi SKU-suz → prefiks eyni yerdən (kateqoriyadan) gəlir.
+        // Əvvəl nömrə məhsulun nüsxə SAYINDAN alınırdı: ikinci məhsulun birinci
+        // nüsxəsi «ST/001» olurdu, halbuki o kod artıq mövcud idi → 500.
+        var a = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/products",
+            new { name = "Qatlanan stul", categoryId = category.Id })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+        var b = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/products",
+            new { name = "Bar stulu", categoryId = category.Id })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+
+        Assert.Equal(HttpStatusCode.Created,
+            (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/units/bulk",
+                new { productId = a.Id, quantity = 3 })).StatusCode);
+
+        var second = await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/units/bulk",
+            new { productId = b.Id, quantity = 2 });
+        Assert.True(second.IsSuccessStatusCode,
+            $"İkinci məhsulun nüsxələri yaradılmadı: {(int)second.StatusCode}");
+
+        var units = await admin.GetFromJsonAsync<List<UnitRowResponse>>("/api/admin/units");
+        var stCodes = units!.Where(u => u.Code.StartsWith("ST/")).Select(u => u.Code).ToList();
+        Assert.Equal(5, stCodes.Count);
+        Assert.Equal(5, stCodes.Distinct().Count()); // toqquşma YOXDUR
+    }
+
+    [Fact]
     public async Task CustomShortCode_Works_WarnsAndStaysUnique()
     {
         if (_factory is null) return; // baza yoxdur
@@ -458,6 +577,9 @@ public sealed class StaffAccessTests : IAsyncLifetime
                 new { code = renewed.AccessCode })).StatusCode);
     }
 
+    private sealed record BulkCodesResponse(int Created, int LastSequence);
+    private sealed record PagedQrResponse(List<QrCodeResponse> Items, int Total);
+    private sealed record UnitRowResponse(Guid Id, string Code, string Status);
     private sealed record AntiforgeryResponse(string Token);
     private sealed record IdResponse(Guid Id);
     private sealed record QrCodeResponse(Guid Id, string Token, string HumanCode,

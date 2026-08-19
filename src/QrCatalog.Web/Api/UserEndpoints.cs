@@ -338,6 +338,15 @@ public static class UserEndpoints
     /// Kodu normallaşdırıb hash-ləyir. Minimum 4 simvol: rəhbərlik yadda saxlanan
     /// qısa kod istəyir («1655»). Daha qısasına icazə verilmir — 3 simvol praktiki
     /// olaraq açıq qapıdır və təsadüfən yazılmış «12» kiməsə uyğun gələ bilər.
+    ///
+    /// HMAC, adi SHA-256 yox — bu fərq bir sızmada hər şeyi həll edir. Kod fəzası
+    /// kiçikdir (4 rəqəm = 10 min, 8 simvol = 2×10¹¹); saltsız SHA-256-da baza
+    /// nüsxəsini ələ keçirən adam bütün kodları noutbukda dəqiqələr içində açır.
+    /// Server sirri (pepper) ilə HMAC-da isə yalnız bazası olan adam heç nə çıxara
+    /// bilmir — sirr bazada deyil, DataProtection açarlarındadır.
+    ///
+    /// Determinist qalır: giriş zamanı koda GÖRƏ istifadəçi tapılmalıdır, ona görə
+    /// təsadüfi salt (parol hash-i kimi) burada işləmir.
     /// </summary>
     internal static string? HashAccessCode(string? code)
     {
@@ -346,9 +355,61 @@ public static class UserEndpoints
         var normalized = NormalizeCode(code);
         if (normalized.Length < 4) return null;
 
+        return Convert.ToHexString(HMACSHA256.HashData(
+            AccessCodePepper.Value, System.Text.Encoding.UTF8.GetBytes(normalized)));
+    }
+
+    /// <summary>
+    /// Köhnə (saltsız) hash — YALNIZ giriş zamanı müqayisə üçün. Uyğun gələndə
+    /// istifadəçinin hash-i səssizcə HMAC-a yüksəldilir (bax AuthEndpoints).
+    /// Bütün kodlar bir dəfə işlədiləndən sonra bu yol ölür.
+    /// </summary>
+    internal static string? LegacyHashAccessCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return null;
+        var normalized = NormalizeCode(code);
+        if (normalized.Length < 4) return null;
+
         return Convert.ToHexString(
             SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(normalized)));
     }
+
+    /// <summary>
+    /// Pepper — tətbiqin DataProtection açarından törədilir. Beləliklə: bazada
+    /// deyil, konfiqurasiyada açıq mətn kimi saxlanılmır, konteyner yenidən
+    /// qurulanda dəyişmir (açarlar `qrcatalog_dpkeys` volume-undadır).
+    /// </summary>
+    private static readonly Lazy<byte[]> AccessCodePepper = new(() =>
+    {
+        var seed = Environment.GetEnvironmentVariable("Security__AccessCodePepper");
+        if (!string.IsNullOrWhiteSpace(seed))
+            return System.Text.Encoding.UTF8.GetBytes(seed);
+
+        // Konfiqurasiya verilməyibsə DataProtection açar qovluğundan sabit dəyər
+        // törədilir — nüsxələr arasında eyni olması üçün volume paylaşılmalıdır.
+        // Compose-dakı ad: DataProtection__KeysPath=/app/keys (dpkeys volume-u).
+        // Səhv ad yazılsa pepper hər başlanğıcda dəyişər və bütün kodlar ölər.
+        var keyDir = Environment.GetEnvironmentVariable("DataProtection__KeysPath")
+            ?? Path.Combine(AppContext.BaseDirectory, "keys");
+        var marker = Path.Combine(keyDir, "access-code-pepper");
+        try
+        {
+            if (File.Exists(marker))
+                return Convert.FromBase64String(File.ReadAllText(marker).Trim());
+
+            Directory.CreateDirectory(keyDir);
+            var generated = RandomNumberGenerator.GetBytes(32);
+            File.WriteAllText(marker, Convert.ToBase64String(generated));
+            return generated;
+        }
+        catch (Exception)
+        {
+            // Disk əlçatmazdırsa tətbiq YIXILMAMALIDIR: bu halda pepper prosesin
+            // ömrü boyu sabit qalır — kodlar yenidən başlayanda etibarsız olur,
+            // amma sistem işləyir və səbəb jurnalda görünür.
+            return RandomNumberGenerator.GetBytes(32);
+        }
+    });
 
     private static string Translate(IdentityError error) => error.Code switch
     {

@@ -2,8 +2,7 @@
 @model QrCatalog.Web.Pages.IModel
 @{
     ViewData["Title"] = Model.Title;
-    Layout = null; // müştəri layout-u deyil: bu daxili ekrandır, brend başlığı və
-                   // «Kolleksiyaya bax» footer-i burada mənasızdır
+    Layout = null; // müştəri layout-u deyil: bu daxili ekrandır
 }
 <!DOCTYPE html>
 <html lang="az">
@@ -27,8 +26,177 @@
     </header>
 
     <main class="staff-wrap">
-        @if (Model.Product is { } p)
+        @* Ölü etiket: müştəri bu kodu skan edəndə boş səhifə görür, tapıb dəyişməli
+           olan yeganə adam isə işçidir — xəbərdarlıq ondan gizlədilməməlidir. *@
+        @if (Model.Retired)
         {
+            <p class="staff-alert">
+                <strong>Bu etiket istifadədən çıxarılıb.</strong>
+                Sökülüb yenisi ilə əvəz olunmalıdır — müştəri bu kodu skan edəndə
+                məhsulu görmür.
+            </p>
+        }
+
+        @if (Model.Unit is { } u)
+        {
+            @* ── NÜSXƏ EKRANI: əvvəl KİMLİK, sonra YER, sonra rəqəmlər ── *@
+            <section class="staff-unit-head">
+                @if (u.ImageUrl is not null)
+                {
+                    <img class="staff-unit-head__img" src="@u.ImageUrl" alt=""
+                         width="64" height="64" loading="lazy" />
+                }
+                <div>
+                    <p class="staff-unit-head__code">@u.UnitCode</p>
+                    <h1>@u.ProductName</h1>
+                    <span class="staff-status staff-status--@u.Status.ToString().ToLowerInvariant()">
+                        @u.StatusLabel
+                    </span>
+                </div>
+            </section>
+
+            <section class="staff-where">
+                <h2>Haradadır</h2>
+                @if (u.Site is { } site)
+                {
+                    <p class="staff-where__name">@site.Name</p>
+                    <p class="staff-where__meta">
+                        @site.Kind@(site.Address is null ? "" : " · " + site.Address)
+                    </p>
+
+                    <p class="staff-where__coords">
+                        @site.Latitude.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture),
+                        @site.Longitude.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture)
+                        <span>@(site.ExactPosition ? "nüsxənin öz mövqeyi" : "təxmini — obyektin ümumi nöqtəsi")</span>
+                    </p>
+
+                    var lat = site.Latitude.ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture);
+                    var lon = site.Longitude.ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture);
+
+                    @* Universal xəritə linki: telefonda quraşdırılmış tətbiqi açır,
+                       yoxdursa brauzerdə göstərir. Waze/Yandex ayrıca verilir —
+                       Azərbaycanda hər ikisi geniş işlədilir. *@
+                    <a class="staff-btn staff-btn--wide"
+                       href="https://www.google.com/maps/dir/?api=1&destination=@lat,@lon"
+                       target="_blank" rel="noopener">Yol göstər</a>
+                    <p class="staff-maplinks">
+                        <a href="https://waze.com/ul?ll=@lat,@lon&navigate=yes" target="_blank" rel="noopener">Waze</a>
+                        <span>·</span>
+                        <a href="https://yandex.com/maps/?rtext=~@lat,@lon&rtt=auto" target="_blank" rel="noopener">Yandex</a>
+                    </p>
+
+                    <div class="staff-here">
+                        <button type="button" class="staff-here__btn" data-here
+                                data-lat="@lat" data-lon="@lon">Buradayam? Məsafəni yoxla</button>
+                        <p class="staff-here__out" data-here-result></p>
+                    </div>
+                }
+                else
+                {
+                    <p class="staff-empty">
+                        Bu nüsxə heç bir obyektə təyin edilməyib — qeyddə anbarda görünür.
+                    </p>
+                }
+            </section>
+
+            <section class="staff-facts">
+                <dl>
+                    @if (u.InstalledOn is { } installed)
+                    {
+                        <div>
+                            <dt>Quraşdırılıb</dt>
+                            <dd>@installed.ToString("dd.MM.yyyy")@(u.Age is null ? "" : $" · {u.Age}")</dd>
+                        </div>
+                    }
+                    @if (u.Warranty is { } warranty)
+                    {
+                        <div class="@(warranty.Expired ? "is-expired" : "")">
+                            <dt>Zəmanət</dt>
+                            <dd>@warranty.Text</dd>
+                        </div>
+                    }
+                    @if (u.Sku is not null)
+                    {
+                        <div>
+                            <dt>Model kodu</dt>
+                            <dd>@u.Sku</dd>
+                        </div>
+                    }
+                </dl>
+                @if (u.Note is not null)
+                {
+                    <p class="staff-note staff-note--boxed">@u.Note</p>
+                }
+            </section>
+
+            @if (u.Site?.ContactPhone is { } phone)
+            {
+                <section class="staff-contact">
+                    <div>
+                        <span>Obyektin əlaqə şəxsi</span>
+                        <strong>@(u.Site.ContactName ?? u.Site.Name)</strong>
+                    </div>
+                    <a class="staff-btn staff-btn--call" href="tel:@phone">@phone</a>
+                </section>
+            }
+
+            @* ── Bir toxunuş arxasında: saylar, digər nüsxələr, obyektin qalanı ── *@
+            <section class="staff-more">
+                <details>
+                    <summary>Bu modeldən neçə ədədimiz var<span>@u.Total</span></summary>
+                    <dl class="staff-more__grid">
+                        <div><dt>Quraşdırılıb</dt><dd>@u.Installed</dd></div>
+                        <div><dt>Anbarda</dt><dd>@u.InStock</dd></div>
+                        <div><dt>Təmirdə</dt><dd>@u.InRepair</dd></div>
+                    </dl>
+                    <p class="staff-hint">Çıxarılmış nüsxələr bu cəmə daxil deyil.</p>
+                </details>
+
+                @if (u.SameSiteCodes.Count > 0)
+                {
+                    <details>
+                        <summary>Bu obyektdə eyni modeldən<span>@u.SameSiteCodes.Count</span></summary>
+                        <p class="staff-codes">@string.Join(" · ", u.SameSiteCodes)</p>
+                    </details>
+                }
+
+                @if (u.SiteOtherProducts.Count > 0)
+                {
+                    <details>
+                        <summary>Bu obyektdə digər modellərimiz<span>@u.SiteOtherProducts.Count</span></summary>
+                        <ul class="staff-minilist">
+                            @foreach (var other in u.SiteOtherProducts)
+                            {
+                                <li><span>@other.Name</span><b>@other.Count əd.</b></li>
+                            }
+                        </ul>
+                    </details>
+                }
+
+                <details>
+                    <summary>Etiket<span>@Model.HumanCode</span></summary>
+                    <p class="staff-hint">
+                        Bu etiket konkret nüsxəyə bağlıdır — skan edən işçi məhz bu
+                        nüsxəni görür, müştəri isə modelin kataloq səhifəsini.
+                    </p>
+                </details>
+            </section>
+
+            <nav class="staff-actions">
+                <a class="staff-btn staff-btn--ghost" href="/admin/vahidler?mehsul=@u.ProductId">
+                    Bütün nüsxələr
+                </a>
+                @if (Model.CanEdit)
+                {
+                    <a class="staff-btn" href="/admin/mehsullar/@u.ProductId">Redaktə et</a>
+                }
+            </nav>
+
+            <script src="~/js/staff.js" asp-append-version="true" defer></script>
+        }
+        else if (Model.Product is { } p)
+        {
+            @* ── MODEL EKRANI: etiket modelə bağlıdır, konkret nüsxə bilinmir ── *@
             <section class="staff-head">
                 @if (p.ImageUrl is not null)
                 {
@@ -53,32 +221,26 @@
                 </div>
             </section>
 
-            @* Ən çox soruşulan rəqəm birinci və ən böyük: «neçə dənəmiz var».
-               Yanındakılar onu izah edir ki, rəqəm mübahisə doğurmasın. *@
+            @* Dürüstlük: model etiketi hansı nüsxənin yanında dayandığını BİLMİR.
+               Bunu yazmasaq işçi ekranın cavab verə bilmədiyi sualı ona verməyə davam edər. *@
+            <p class="staff-note staff-note--boxed">
+                Bu etiket <strong>modelə</strong> bağlıdır — hansı nüsxənin yanında
+                olduğunuzu göstərə bilmir. Konkret skamyanı tanımaq üçün nüsxə
+                etiketi lazımdır (hər nüsxənin öz kodu: @(p.Sku ?? "SK-…")/001).
+            </p>
+
             <section class="staff-count">
                 <div class="staff-count__main">
                     <strong>@p.Total</strong>
                     <span>ədəd — işlək</span>
                 </div>
                 <dl class="staff-count__split">
-                    <div>
-                        <dt>Quraşdırılıb</dt>
-                        <dd>@p.Installed</dd>
-                    </div>
-                    <div>
-                        <dt>Anbarda</dt>
-                        <dd>@p.InStock</dd>
-                    </div>
-                    <div>
-                        <dt>Təmirdə</dt>
-                        <dd>@p.InRepair</dd>
-                    </div>
+                    <div><dt>Quraşdırılıb</dt><dd>@p.Installed</dd></div>
+                    <div><dt>Anbarda</dt><dd>@p.InStock</dd></div>
+                    <div><dt>Təmirdə</dt><dd>@p.InRepair</dd></div>
                     @if (p.Removed > 0)
                     {
-                        <div class="is-muted">
-                            <dt>Çıxarılıb</dt>
-                            <dd>@p.Removed</dd>
-                        </div>
+                        <div class="is-muted"><dt>Çıxarılıb</dt><dd>@p.Removed</dd></div>
                     }
                 </dl>
             </section>
@@ -94,7 +256,19 @@
                 }
                 else
                 {
-                    <p class="staff-note">@p.Sites.Count obyektdə, cəmi @p.Installed ədəd</p>
+                    @* Başlıq siyahının ÖZÜNDƏN hesablanır: obyektsiz «quraşdırılıb»
+                       nüsxə varsa rəqəm yuxarıdakı sayla fərqlənir və bu, ekranın
+                       öz-özünü təkzib etməsinin qarşısını alır. *@
+                    <p class="staff-note">
+                        @p.Sites.Count obyektdə, cəmi @p.Sites.Sum(x => x.Count) ədəd
+                        @if (p.Sites.Sum(x => x.Count) != p.Installed)
+                        {
+                            <span class="staff-hint">
+                                Qalan @(p.Installed - p.Sites.Sum(x => x.Count)) ədəd
+                                «quraşdırılıb» kimi qeyd olunub, amma obyekti seçilməyib.
+                            </span>
+                        }
+                    </p>
                     <ul class="staff-sites">
                         @foreach (var site in p.Sites)
                         {
@@ -114,9 +288,6 @@
                                         <span>· quraşdırılıb: @installed.ToString("dd.MM.yyyy")</span>
                                     }
                                 </div>
-                                @* Nüsxə kodları zəng gələndə lazım olur: «hansı skamya»
-                                   sualına cavab budur. Çox olanda siyahı səhifəni boğmasın
-                                   deyə açılıb-bağlanır. *@
                                 <details class="staff-site__codes">
                                     <summary>Nüsxə kodları (@site.UnitCodes.Count)</summary>
                                     <p>@string.Join(" · ", site.UnitCodes)</p>

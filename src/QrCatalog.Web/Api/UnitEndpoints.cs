@@ -109,9 +109,30 @@ public static class UnitEndpoints
             var created = new List<string>();
             for (var attempt = 1; ; attempt++)
             {
-                // Növbəti nömrə: bu modelin mövcud nüsxə sayı. Unikal indeks + təkrar cəhd
-                // yarışı həll edir; nüsxə yaratmaq nadir əməliyyatdır, kilid lazım deyil.
-                var existing = await db.SiteUnits.CountAsync(u => u.ProductId == product.Id);
+                // Növbəti nömrə PREFİKSƏ görə mövcud ƏN BÖYÜK nömrədən götürülür.
+                //
+                // Əvvəl bu modelin nüsxə SAYI işlədilirdi və iki halda sınırdı:
+                // (a) iki məhsulun SKU-su boşdursa prefiks kateqoriyadan gəlir — ikinci
+                //     məhsulun birinci nüsxəsi «SK/001» olur, halbuki o kod artıq var;
+                // (b) aradan nüsxə silinsə say azalır və növbəti kod işlənmiş nömrəni
+                //     təkrar verir.
+                // Nəticə hər dəfə eyni idi: unikal indeks pozulur, kod 5 dəfə boş yerə
+                // təkrar cəhd edir və istifadəçi izahsız 500 alır.
+                var maxSuffix = 0;
+                var sameprefix = await db.SiteUnits
+                    .Where(u => u.Code.StartsWith(prefix + "/"))
+                    .Select(u => u.Code)
+                    .ToListAsync();
+                foreach (var code in sameprefix)
+                {
+                    var slash = code.LastIndexOf('/');
+                    if (slash >= 0 && int.TryParse(code[(slash + 1)..], out var suffix) &&
+                        suffix > maxSuffix)
+                    {
+                        maxSuffix = suffix;
+                    }
+                }
+                var existing = maxSuffix;
                 var units = new List<SiteUnit>();
 
                 for (var i = 0; i < request.Quantity; i++)

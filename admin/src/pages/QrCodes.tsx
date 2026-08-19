@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useCategories } from '../api/categories'
 import { useProducts } from '../api/products'
 import {
+  useBulkUnitCodes,
   useActivateQrCode,
   useCreateQrCode,
   useQrCodes,
@@ -11,6 +12,74 @@ import {
 } from '../api/qrcodes'
 
 type TargetKind = 'product' | 'category' | 'archive'
+
+/* Bir modelin BÜTÜN nüsxələrinə kod verir. Ayrıca panel lazımdır, çünki nüsxə
+   kodları onlarla-yüzlərlədir: tək-tək dialoqdan keçirmək real iş deyil.
+   Kodu artıq olan nüsxələr atlanır — düymə təhlükəsiz təkrar basıla bilər. */
+function BulkUnitPanel({ onClose }: { onClose: () => void }) {
+  const products = useProducts('', '', '', 1)
+  const bulk = useBulkUnitCodes()
+  const [productId, setProductId] = useState('')
+  const [result, setResult] = useState<number | null>(null)
+
+  return (
+    <div className="fixed inset-0 z-10 flex items-center justify-center bg-stone-900/40 px-4">
+      <form
+        onSubmit={e => {
+          e.preventDefault()
+          bulk.mutate({ productId }, { onSuccess: r => setResult(r.created) })
+        }}
+        className="w-full max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-lg"
+      >
+        <h2 className="text-base font-semibold">Nüsxələrə toplu kod</h2>
+        <p className="mt-1 text-sm text-stone-500">
+          Seçilmiş modelin hər fiziki nüsxəsinə öz QR kodu verilir. Skan edən işçi
+          məhz həmin nüsxəni görür: harada quraşdırılıb, nə vaxtdan durur, zəmanəti
+          nə vaxt bitir.
+        </p>
+
+        <label className="mt-4 block">
+          <span className="text-sm font-medium text-stone-700">Model</span>
+          <select
+            required
+            value={productId}
+            onChange={e => { setProductId(e.target.value); setResult(null) }}
+            className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm"
+          >
+            <option value="">— seçin —</option>
+            {products.data?.items.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name}{p.sku ? ` · ${p.sku}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {result !== null && (
+          <p className="mt-3 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            {result === 0
+              ? 'Yeni kod yaradılmadı — bu modelin bütün nüsxələrində artıq kod var.'
+              : `${result} nüsxəyə kod verildi. Siyahıdan seçib çap vərəqi yükləyin.`}
+          </p>
+        )}
+        {bulk.isError && (
+          <p className="mt-3 text-sm text-red-700">{(bulk.error as Error).message}</p>
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose}
+            className="rounded px-4 py-2 text-sm text-stone-600 hover:bg-stone-100">
+            Bağla
+          </button>
+          <button type="submit" disabled={bulk.isPending || !productId}
+            className="rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+            {bulk.isPending ? 'Yaradılır…' : 'Kodları yarat'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
 
 function CreateDialog({ onClose }: { onClose: () => void }) {
   const categories = useCategories()
@@ -130,6 +199,7 @@ export default function QrCodes() {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState(false)
+  const [showBulk, setShowBulk] = useState(false)
 
   const codes = useQrCodes(search, page)
   const retire = useRetireQrCode()
@@ -164,6 +234,13 @@ export default function QrCodes() {
             className="rounded border border-emerald-800 px-4 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50 disabled:opacity-40"
           >
             {sheet.isPending ? 'Hazırlanır…' : `Çap vərəqi (${selected.size})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBulk(true)}
+            className="rounded border border-emerald-800 px-4 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50"
+          >
+            Nüsxə kodları
           </button>
           <button
             type="button"
@@ -220,7 +297,9 @@ export default function QrCodes() {
                       ? 'Məhsul'
                       : qr.targetType === 'Category'
                         ? 'Kateqoriya'
-                        : 'Arxiv'}
+                        : qr.targetType === 'Unit'
+                          ? 'Nüsxə'
+                          : 'Arxiv'}
                   </span>
                   {qr.targetType === 'Archive'
                     ? null
@@ -283,6 +362,7 @@ export default function QrCodes() {
       )}
 
       {showCreate && <CreateDialog onClose={() => setShowCreate(false)} />}
+      {showBulk && <BulkUnitPanel onClose={() => setShowBulk(false)} />}
     </div>
   )
 }

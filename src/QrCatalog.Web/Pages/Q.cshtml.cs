@@ -106,6 +106,44 @@ public sealed class QModel : PageModel
             return Page();
         }
 
+        // Vahid kodu qonaq üçün MƏHSUL səhifəsidir: obyekt adı, ünvan, nüsxə kodu və
+        // anbar qalığı daxili məlumatdır — müştəriyə getmir. İşçi isə yuxarıda
+        // /i/{token}-ə yönləndirilib və orada tam kartı görür.
+        if (qrCode.TargetType == QrTargetType.Unit && qrCode.TargetId is { } unitId)
+        {
+            // IgnoreQueryFilters açıqdır — CompanyId şərti MÜTLƏQ əl ilə yazılmalıdır,
+            // yoxsa başqa müəssisənin nüsxəsi tapıla bilər.
+            var unitProductId = await _db.SiteUnits.IgnoreQueryFilters().AsNoTracking()
+                .Where(u => u.Id == unitId && u.CompanyId == qrCode.CompanyId)
+                .Select(u => (Guid?)u.ProductId)
+                .FirstOrDefaultAsync();
+
+            if (unitProductId is { } pid)
+            {
+                var unitLoad = await PublicCatalogQueries.LoadProductAsync(
+                    _db, _storage, qrCode.CompanyId, id: pid,
+                    humanCode: qrCode.HumanCode, qrToken: qrCode.Token);
+
+                if (unitLoad?.Product is { } unitProduct)
+                {
+                    State = QState.Found;
+                    Product = unitProduct;
+                    return Page();
+                }
+
+                // Məhsul qaralama/arxivdədir: çap olunmuş etiket 404 GÖRMƏMƏLİDİR
+                State = QState.Archived;
+                if (unitLoad is not null)
+                    Similar = await PublicCatalogQueries.SimilarProductsAsync(
+                        _db, _storage, qrCode.CompanyId, unitLoad.CategoryId, pid);
+                return Page();
+            }
+
+            // Nüsxə silinib — etiket kağızda qalır, izahlı səhifə göstərilir
+            State = QState.Archived;
+            return Page();
+        }
+
         switch (qrCode.TargetType)
         {
             case QrTargetType.Category:

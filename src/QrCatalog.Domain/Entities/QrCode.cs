@@ -12,6 +12,18 @@ public enum QrTargetType
 
     /// <summary>Arxiv səhifəsi — hədəfi istehsaldan çıxmış kodlar bura yönləndirilir.</summary>
     Archive = 2,
+
+    /// <summary>
+    /// KONKRET FİZİKİ NÜSXƏ (bir skamya, bir şezlonq) — model yox.
+    ///
+    /// Model səviyyəli kod «bu modeldən 119 ədəd var» deyir; sahədə duran adamın sualı
+    /// isə «MƏN İNDİ hansının yanındayam, bu harada quraşdırılıb, nə vaxtdan durur»dur.
+    /// Bu suala yalnız nüsxəyə bağlı etiket cavab verə bilir.
+    ///
+    /// Dəyər MÜTLƏQ 3 olmalıdır: enum bazada tam ədəd kimi saxlanılır, aralığa
+    /// salınsa mövcud 0/1/2 sətirlərin mənası dəyişər və bunu geri qaytarmaq olmur.
+    /// </summary>
+    Unit = 3,
 }
 
 public enum QrCodeStatus

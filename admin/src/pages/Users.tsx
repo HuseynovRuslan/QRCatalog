@@ -88,11 +88,15 @@ function CredentialsNotice({ email, accessCode, tempPassword, warning, onClose }
             value={accessCode}
             hint="katalog.qrlog.az/admin → kodu yazır → «Məni xatırla» → 30 gün parol görmür."
           />
-          <CopyBox
-            label="Hazır link (WhatsApp ilə göndərmək üçün)"
-            value={`https://katalog.qrlog.az/admin/login?kod=${accessCode}`}
-            hint="Linki YALNIZ həmin işçiyə göndərin: açan adamda kod hazır dolur, «Daxil ol»a basmaq qalır."
-          />
+          {/* «Hazır link» qutusu QƏSDƏN YOXDUR.
+              Kod daimi və müddətsizdir — onu URL-ə qoyub WhatsApp-la göndərmək o
+              deməkdir ki, forward edilən mesaj, satılan telefon və ya bulud nüsxəsi
+              həmişəlik giriş açarı daşıyır. Kod şifahi deyilir ya da bir dəfə
+              göstərilib əl ilə yazılır. */}
+          <p className="mt-2 text-xs text-amber-800">
+            Kodu işçiyə şifahi deyin və ya bir dəfə göstərin — mesajla göndərməyin:
+            mesaj başqasına ötürülsə kod həmişəlik onda qalır.
+          </p>
         </>
       )}
 

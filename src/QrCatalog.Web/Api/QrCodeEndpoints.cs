@@ -12,6 +12,10 @@ public static class QrCodeEndpoints
     private const string FallbackPrefix = "QR";
     private const int MaxCreateRetries = 3;
 
+    /// <summary>Bir sorğuda yaradılan maksimum vahid kodu — 27 A4 səhifəlik etiket.
+    /// Limitsiz olsa 567 QR şəkli sinxron sorğuda render olunub taymauta düşərdi.</summary>
+    private const int MaxBulkCodes = 600;
+
     public static void MapQrCodeEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/admin/qrcodes");
@@ -101,6 +105,33 @@ public static class QrCodeEndpoints
                 prefix = codePrefix ?? FallbackPrefix;
                 targetName = product.Name ?? "(adsız)";
             }
+            else if (targetType == QrTargetType.Unit)
+            {
+                // Nüsxə kodu (SK-PR-3N/007) prefiks kimi İŞLƏNMİR: Prefix sütunu 4
+                // simvoldur, SKU isə uzun olur — yazmaq DbUpdateException verər və
+                // yaratma məntiqi onu «yarış» kimi diaqnoz edib 3 dəfə boş təkrar edər.
+                // Prefiks yenə kateqoriyadan gəlir; etiketdə isə NÜSXƏ kodu çap olunur,
+                // çünki sahədə işə yarayan kod məhz odur.
+                var unit = await db.SiteUnits.AsNoTracking()
+                    .Where(u => u.Id == request.TargetId)
+                    .Select(u => new { u.Code, u.ProductId })
+                    .FirstOrDefaultAsync();
+                if (unit is null)
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                        title: "Hədəf nüsxə tapılmadı.");
+
+                var unitCategoryId = await db.Products.AsNoTracking()
+                    .Where(pr => pr.Id == unit.ProductId)
+                    .Select(pr => (Guid?)pr.CategoryId)
+                    .FirstOrDefaultAsync();
+                var unitPrefix = unitCategoryId is null ? null : await db.Categories.AsNoTracking()
+                    .Where(c => c.Id == unitCategoryId)
+                    .Select(c => c.CodePrefix)
+                    .FirstOrDefaultAsync();
+
+                prefix = unitPrefix ?? FallbackPrefix;
+                targetName = unit.Code;
+            }
 
             // Nömrə yarışı: unikal indeks + təkrar cəhd. Admin kod yaratması nadir əməliyyatdır,
             // FOR UPDATE kilidinə ehtiyac yoxdur.
@@ -156,6 +187,13 @@ public static class QrCodeEndpoints
                     title: "Hədəf məhsul tapılmadı.");
             }
 
+            if (targetType == QrTargetType.Unit &&
+                !await db.SiteUnits.AnyAsync(u => u.Id == request.TargetId))
+            {
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: "Hədəf nüsxə tapılmadı.");
+            }
+
             try
             {
                 qrCode.Retarget(targetType,
@@ -168,6 +206,79 @@ public static class QrCodeEndpoints
 
             await db.SaveChangesAsync();
             return Results.NoContent();
+        })
+        .RequireAuthorization(Policies.CanEdit)
+        .RequireAntiforgery();
+
+        // TOPLU VAHİD KODU. Bir modelin 119 nüsxəsi var — tək-tək yaratmaq 119 HTTP
+        // sorğusu deməkdir və hər biri öz nömrə yarışını aparır. Burada nömrə BİR
+        // dəfə oxunur, kodlar yaddaşda qurulur, bir SaveChanges ilə yazılır.
+        //
+        // Nüsxəsi artıq kodu olanlar ATLANIR: əməliyyat təkrar işlədilə bilər
+        // (yarımçıq qalmış çap partiyası, əlavə olunmuş yeni nüsxələr).
+        group.MapPost("/units/bulk", async (
+            BulkUnitCodesRequest request, AppDbContext db, ITenantContext tenant) =>
+        {
+            if (tenant.CompanyId is not { } companyId)
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden,
+                    title: "Bu əməliyyat üçün müəssisə konteksti lazımdır.");
+
+            var product = await db.Products.AsNoTracking()
+                .Where(p => p.Id == request.ProductId)
+                .Select(p => new { p.Id, p.CategoryId })
+                .FirstOrDefaultAsync();
+            if (product is null)
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: "Məhsul tapılmadı.");
+
+            var prefix = await db.Categories.AsNoTracking()
+                .Where(c => c.Id == product.CategoryId)
+                .Select(c => c.CodePrefix)
+                .FirstOrDefaultAsync() ?? FallbackPrefix;
+
+            // Kodu OLMAYAN nüsxələr
+            var withCode = await db.QrCodes.AsNoTracking()
+                .Where(q => q.TargetType == QrTargetType.Unit && q.TargetId != null)
+                .Select(q => q.TargetId!.Value)
+                .ToListAsync();
+
+            var unitsQuery = db.SiteUnits.AsNoTracking()
+                .Where(u => u.ProductId == product.Id && !withCode.Contains(u.Id));
+            if (request.SiteId is { } siteId)
+                unitsQuery = unitsQuery.Where(u => u.SiteId == siteId);
+
+            var units = await unitsQuery
+                .OrderBy(u => u.Code)
+                .Take(MaxBulkCodes)
+                .Select(u => new { u.Id, u.Code })
+                .ToListAsync();
+
+            if (units.Count == 0)
+                return Results.Ok(new BulkUnitCodesResult(0, 0));
+
+            for (var attempt = 1; ; attempt++)
+            {
+                var next = await db.QrCodes
+                    .Where(q => q.Prefix == prefix)
+                    .Select(q => (int?)q.Sequence)
+                    .MaxAsync() ?? 0;
+
+                var codes = units.Select((unit, index) => QrCode.Create(
+                    companyId, TokenGenerator.Next(), prefix, next + index + 1,
+                    QrTargetType.Unit, unit.Id)).ToList();
+
+                db.QrCodes.AddRange(codes);
+                try
+                {
+                    await db.SaveChangesAsync();
+                    return Results.Ok(new BulkUnitCodesResult(codes.Count, next + codes.Count));
+                }
+                catch (DbUpdateException) when (attempt < MaxCreateRetries)
+                {
+                    foreach (var code in codes)
+                        db.Entry(code).State = EntityState.Detached;
+                }
+            }
         })
         .RequireAuthorization(Policies.CanEdit)
         .RequireAntiforgery();
@@ -287,6 +398,20 @@ public static class QrCodeEndpoints
             }
         }
 
+        // Vahid kodları: etiketdə çap olunan mətn budur. Bu qol unudulsa etiketlərin
+        // HAMISINDA ad sahəsi boş gedir — PDF səhvsiz yaranır, səhv yalnız kağızda görünür.
+        var unitIds = byType[nameof(QrTargetType.Unit)].Distinct().ToList();
+        if (unitIds.Count > 0)
+        {
+            foreach (var (id, name) in await db.SiteUnits.AsNoTracking()
+                .Where(u => unitIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.Code })
+                .ToDictionaryAsync(u => u.Id, u => u.Code))
+            {
+                names[id] = name;
+            }
+        }
+
         return names;
     }
 
@@ -309,6 +434,8 @@ public sealed record QrCodeDto(
 public sealed record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
 
 public sealed record CreateQrCodeRequest(string TargetType, Guid? TargetId);
+public sealed record BulkUnitCodesRequest(Guid ProductId, Guid? SiteId);
+public sealed record BulkUnitCodesResult(int Created, int LastSequence);
 
 public sealed record RetargetRequest(string TargetType, Guid? TargetId);
 

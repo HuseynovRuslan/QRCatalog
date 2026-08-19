@@ -36,13 +36,23 @@ public sealed class IModel : PageModel
     public string? HumanCode { get; private set; }
     public bool CanEdit { get; private set; }
 
+    /// <summary>
+    /// Etiket istifadədən çıxarılıb. İşçi bunu GÖRMƏLİDİR: müştəri həmin kodu skan
+    /// edəndə boş səhifə alır, etiketi tapıb dəyişməli olan yeganə adam isə işçidir.
+    /// Xəbərdarlıq olmasa ölü etiket yerində qalır və heç kim səbəbini bilmir.
+    /// </summary>
+    public bool Retired { get; private set; }
+
+    // Vahid kodu üçün — konkret fiziki nüsxə
+    public UnitInfoVm? Unit { get; private set; }
+
     // Məhsul kodu üçün
     public ProductInfoVm? Product { get; private set; }
 
     // Kateqoriya kodu üçün
     public CategoryInfoVm? Category { get; private set; }
 
-    public string Title => Product?.Name ?? Category?.Name ?? "Məlumat";
+    public string Title => Unit?.UnitCode ?? Product?.Name ?? Category?.Name ?? "Məlumat";
 
     public async Task<IActionResult> OnGetAsync(string token)
     {
@@ -64,10 +74,13 @@ public sealed class IModel : PageModel
             return Redirect($"/q/{token}");
 
         HumanCode = qrCode.HumanCode;
+        Retired = qrCode.Status == QrCodeStatus.Retired;
         CanEdit = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Editor);
 
         return qrCode.TargetType switch
         {
+            QrTargetType.Unit when qrCode.TargetId is { } unitId =>
+                await LoadUnitAsync(companyId, unitId),
             QrTargetType.Product when qrCode.TargetId is { } productId =>
                 await LoadProductAsync(companyId, productId),
             QrTargetType.Category when qrCode.TargetId is { } categoryId =>
@@ -75,6 +88,174 @@ public sealed class IModel : PageModel
             _ => Redirect("/admin/qr"),
         };
     }
+
+    /// <summary>
+    /// NÜSXƏ EKRANI — «bu skamya haradadır» sualının cavabı.
+    ///
+    /// Sıralama qəsdən belədir: kimlik → YER (obyekt, ünvan, koordinat) → vəziyyət və
+    /// zəmanət → əlaqə. Sahədə duran adamın ilk sualı yerdir, say deyil; saylar bir
+    /// toxunuş arxasındadır. Model səviyyəli ekranda əvvəl iri rəqəm gəlirdi — o,
+    /// rəhbərlik üçün düzgündür, sahə üçün yox.
+    /// </summary>
+    private async Task<IActionResult> LoadUnitAsync(Guid companyId, Guid unitId)
+    {
+        var unit = await _db.SiteUnits
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(u => u.Id == unitId && u.CompanyId == companyId)
+            .Select(u => new
+            {
+                u.Id,
+                u.Code,
+                u.Status,
+                u.InstalledOn,
+                u.Note,
+                u.Latitude,
+                u.Longitude,
+                u.ProductId,
+                u.SiteId,
+                ProductName = _db.Products.IgnoreQueryFilters()
+                    .Where(p => p.Id == u.ProductId)
+                    .SelectMany(p => p.Translations.Where(t => t.Lang == "az").Select(t => t.Name))
+                    .FirstOrDefault(),
+                ProductSku = _db.Products.IgnoreQueryFilters()
+                    .Where(p => p.Id == u.ProductId).Select(p => p.Sku).FirstOrDefault(),
+                ImagePrefix = _db.Products.IgnoreQueryFilters()
+                    .Where(p => p.Id == u.ProductId)
+                    .SelectMany(p => p.Images.OrderBy(i => i.SortOrder).Select(i => i.StoragePrefix))
+                    .FirstOrDefault(),
+                CategoryId = _db.Products.IgnoreQueryFilters()
+                    .Where(p => p.Id == u.ProductId).Select(p => (Guid?)p.CategoryId).FirstOrDefault(),
+            })
+            .FirstOrDefaultAsync();
+
+        if (unit is null)
+            return NotFound();
+
+        var site = unit.SiteId is null ? null : await _db.Sites
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(x => x.Id == unit.SiteId && x.CompanyId == companyId)
+            .Select(x => new
+            {
+                x.Id, x.Name, x.Kind, x.Address, x.Latitude, x.Longitude,
+                x.ContactName, x.ContactPhone,
+            })
+            .FirstOrDefaultAsync();
+
+        // Zəmanət müddəti spesifikasiyadadır («Zəmanət» → «2 il»). Sahədə ən bahalı
+        // qərar məhz budur: təmir pulsuzdur, yoxsa ödənişli.
+        var specs = await _db.Products
+            .IgnoreQueryFilters().AsNoTracking()
+            .Where(p => p.Id == unit.ProductId)
+            .SelectMany(p => p.Specs.Select(sp => new { sp.Label, sp.Value }))
+            .ToListAsync();
+        var warrantyText = specs
+            .FirstOrDefault(sp => sp.Label.StartsWith("Zəmanət", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        var siblings = await _db.SiteUnits
+            .IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.ProductId == unit.ProductId && u.CompanyId == companyId)
+            .Select(u => new { u.Id, u.Code, u.Status, u.SiteId })
+            .ToListAsync();
+
+        var sameSite = siblings
+            .Where(u => u.SiteId == unit.SiteId && u.Id != unit.Id &&
+                        u.Status == UnitStatus.Installed)
+            .OrderBy(u => u.Code)
+            .Select(u => u.Code)
+            .ToList();
+
+        // Obyektdəki DİGƏR modellərimiz — xidmət marşrutu üçün: adam onsuz da oradadır.
+        //
+        // İKİ addımda: qruplaşdırma ilə eyni sorğuda ad alt-sorğusu qoymaq EF-in
+        // tərcümə edə bilmədiyi ifadə verir (GroupBy + korrelyasiyalı alt-sorğu) —
+        // nəticə 500 olur və səbəb yalnız server jurnalında görünür.
+        var siteOther = new List<SiteProductVm>();
+        if (unit.SiteId is not null)
+        {
+            var grouped = await _db.SiteUnits
+                .IgnoreQueryFilters().AsNoTracking()
+                .Where(u => u.SiteId == unit.SiteId && u.CompanyId == companyId &&
+                            u.ProductId != unit.ProductId && u.Status == UnitStatus.Installed)
+                .GroupBy(u => u.ProductId)
+                .Select(g => new { ProductId = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            if (grouped.Count > 0)
+            {
+                var otherIds = grouped.Select(g => g.ProductId).ToList();
+                var otherNames = await _db.Products
+                    .IgnoreQueryFilters().AsNoTracking()
+                    .Where(p => otherIds.Contains(p.Id))
+                    .Select(p => new
+                    {
+                        p.Id,
+                        Name = p.Translations.Where(t => t.Lang == "az")
+                            .Select(t => t.Name).FirstOrDefault(),
+                    })
+                    .ToDictionaryAsync(p => p.Id, p => p.Name ?? "(adsız)");
+
+                siteOther = grouped
+                    .Select(g => new SiteProductVm(
+                        otherNames.GetValueOrDefault(g.ProductId, "(adsız)"), g.Count))
+                    .OrderByDescending(x => x.Count)
+                    .ToList();
+            }
+        }
+
+        Unit = new UnitInfoVm(
+            unit.Id,
+            unit.Code,
+            unit.ProductId,
+            unit.ProductName ?? "Adsız məhsul",
+            unit.ProductSku,
+            unit.ImagePrefix is null
+                ? null
+                : _storage.GetPublicUrl($"{unit.ImagePrefix}/w320.webp"),
+            UnitStatusLabel(unit.Status),
+            unit.Status,
+            unit.InstalledOn,
+            WarrantyEndsOn(unit.InstalledOn, warrantyText),
+            unit.Note,
+            site is null ? null : new UnitSiteVm(
+                site.Id, site.Name, SiteKindLabel(site.Kind), site.Address,
+                unit.Latitude ?? site.Latitude,
+                unit.Longitude ?? site.Longitude,
+                ExactPosition: unit.Latitude is not null,
+                site.ContactName, site.ContactPhone),
+            Installed: siblings.Count(u => u.Status == UnitStatus.Installed),
+            InStock: siblings.Count(u => u.Status == UnitStatus.InStock),
+            InRepair: siblings.Count(u => u.Status == UnitStatus.InRepair),
+            SameSiteCodes: sameSite,
+            SiteOtherProducts: siteOther);
+
+        return Page();
+    }
+
+    /// <summary>«2 il» + quraşdırma tarixi → bitmə tarixi. Format tanınmasa null.</summary>
+    private static DateOnly? WarrantyEndsOn(DateOnly? installedOn, string? warranty)
+    {
+        if (installedOn is not { } start || string.IsNullOrWhiteSpace(warranty))
+            return null;
+
+        var digits = new string(warranty.TakeWhile(char.IsDigit).ToArray());
+        if (!int.TryParse(digits, out var amount) || amount <= 0)
+            return null;
+
+        return warranty.Contains("ay", StringComparison.OrdinalIgnoreCase)
+            ? start.AddMonths(amount)
+            : start.AddYears(amount);
+    }
+
+    private static string UnitStatusLabel(UnitStatus status) => status switch
+    {
+        UnitStatus.Installed => "Quraşdırılıb",
+        UnitStatus.InStock => "Anbarda",
+        UnitStatus.InRepair => "Təmirdə",
+        _ => "Çıxarılıb",
+    };
 
     private async Task<IActionResult> LoadProductAsync(Guid companyId, Guid productId)
     {
@@ -214,6 +395,80 @@ public sealed class IModel : PageModel
         SiteKind.Beach => "Çimərlik",
         _ => "Obyekt",
     };
+}
+
+public sealed record UnitSiteVm(
+    Guid SiteId,
+    string Name,
+    string Kind,
+    string? Address,
+    double Latitude,
+    double Longitude,
+    /// <summary>Nüsxənin öz koordinatı var, yoxsa obyektin ümumi nöqtəsi işlədilir.</summary>
+    bool ExactPosition,
+    string? ContactName,
+    string? ContactPhone);
+
+public sealed record SiteProductVm(string Name, int Count);
+
+public sealed record UnitInfoVm(
+    Guid Id,
+    string UnitCode,
+    Guid ProductId,
+    string ProductName,
+    string? Sku,
+    string? ImageUrl,
+    string StatusLabel,
+    UnitStatus Status,
+    DateOnly? InstalledOn,
+    DateOnly? WarrantyEndsOn,
+    string? Note,
+    UnitSiteVm? Site,
+    int Installed,
+    int InStock,
+    int InRepair,
+    List<string> SameSiteCodes,
+    List<SiteProductVm> SiteOtherProducts)
+{
+    public int Total => Installed + InStock + InRepair;
+
+    /// <summary>Quraşdırmadan keçən müddət — «1 il 3 ay» kimi.</summary>
+    public string? Age
+    {
+        get
+        {
+            if (InstalledOn is not { } start) return null;
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            if (start > today) return null;
+
+            var months = (today.Year - start.Year) * 12 + today.Month - start.Month;
+            if (today.Day < start.Day) months--;
+            if (months < 1) return "bu ay";
+
+            var years = months / 12;
+            var rest = months % 12;
+            return years == 0 ? $"{rest} ay"
+                : rest == 0 ? $"{years} il"
+                : $"{years} il {rest} ay";
+        }
+    }
+
+    /// <summary>Zəmanətin qalan müddəti; bitibsə mənfi işarəli mətn.</summary>
+    public (string Text, bool Expired)? Warranty
+    {
+        get
+        {
+            if (WarrantyEndsOn is not { } ends) return null;
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            if (ends < today) return ($"{ends:dd.MM.yyyy} — bitib", true);
+
+            var months = (ends.Year - today.Year) * 12 + ends.Month - today.Month;
+            var left = months < 1 ? "bu ay bitir"
+                : months < 12 ? $"{months} ay qalıb"
+                : $"{months / 12} il {months % 12} ay qalıb";
+            return ($"{ends:dd.MM.yyyy} — {left}", false);
+        }
+    }
 }
 
 public sealed record SitePresenceVm(

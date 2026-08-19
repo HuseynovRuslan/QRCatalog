@@ -5,7 +5,7 @@ export interface QrCode {
   id: string
   token: string
   humanCode: string
-  targetType: 'Product' | 'Category' | 'Archive'
+  targetType: 'Product' | 'Category' | 'Archive' | 'Unit'
   targetId: string | null
   status: 'Active' | 'Retired'
   createdAtUtc: string
@@ -86,5 +86,20 @@ export function useSheetDownload() {
       a.click()
       URL.revokeObjectURL(url)
     },
+  })
+}
+
+/* Bir modelin nüsxələrinə TOPLU kod: 119 nüsxə üçün 119 ayrı sorğu praktiki deyil,
+   üstəlik hər biri öz nömrə yarışını aparardı. Kodu artıq olan nüsxələr atlanır,
+   yəni əməliyyat təhlükəsiz təkrarlanır. */
+export function useBulkUnitCodes() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { productId: string; siteId?: string }) =>
+      api<{ created: number; lastSequence: number }>('/api/admin/qrcodes/units/bulk', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['qrcodes'] }),
   })
 }

@@ -28,8 +28,17 @@ export default function Login() {
   // Kod ünvanda gələ bilər (işçiyə göndərilən link) — sahə hazır dolur, amma
   // AVTOMATİK göndərilmir: linki səhvən paylaşan adam kiminsə hesabına
   // xəbərsiz giriş etmiş olmasın.
-  const [code, setCode] = useState(() =>
-    formatCode(new URLSearchParams(window.location.search).get('kod') ?? ''))
+  const [code, setCode] = useState(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('kod') ?? ''
+    if (fromUrl) {
+      // Kodu ünvan sətrindən DƏRHAL sil: yoxsa o, brauzer tarixçəsində, ünvan
+      // avtotamamlamasında və ekran paylaşımında açıq mətn kimi qalır.
+      const clean = new URL(window.location.href)
+      clean.searchParams.delete('kod')
+      window.history.replaceState({}, '', clean.pathname + clean.search + clean.hash)
+    }
+    return formatCode(fromUrl)
+  })
   // İşçi girişi əsas yoldur; e-poçt+parol admin üçün qalır
   const [mode, setMode] = useState<'code' | 'email'>('code')
   const login = useLogin()
