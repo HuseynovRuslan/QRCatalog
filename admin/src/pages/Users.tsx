@@ -7,6 +7,7 @@ import {
   useDeactivateUser,
   useResetUserCode,
   useResetUserPassword,
+  useUpdateUser,
   useSetUserRole,
   useUsers,
   type UserRow,
@@ -51,10 +52,11 @@ function CopyBox({ label, value, hint, big }: {
   )
 }
 
-function CredentialsNotice({ email, accessCode, tempPassword, onClose }: {
+function CredentialsNotice({ email, accessCode, tempPassword, warning, onClose }: {
   email: string
   accessCode?: string
   tempPassword?: string
+  warning?: string | null
   onClose: () => void
 }) {
   return (
@@ -71,6 +73,12 @@ function CredentialsNotice({ email, accessCode, tempPassword, onClose }: {
           Bağla
         </button>
       </div>
+
+      {warning && (
+        <p className="mt-3 rounded border border-amber-400 bg-amber-100 px-3 py-2 text-xs text-amber-900">
+          {warning}
+        </p>
+      )}
 
       {accessCode && (
         <>
@@ -112,18 +120,20 @@ export default function Users() {
   const activate = useActivateUser()
   const resetPassword = useResetUserPassword()
   const resetCode = useResetUserCode()
+  const updateUser = useUpdateUser()
 
   const [adding, setAdding] = useState(false)
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [role, setRoleValue] = useState('Viewer')
   const [issued, setIssued] = useState<
-    { email: string; accessCode?: string; tempPassword?: string } | null>(null)
+    { email: string; accessCode?: string; tempPassword?: string; warning?: string | null } | null>(null)
 
   const rows = users.data ?? []
   const activeAdmins = rows.filter(u => u.role === 'Admin' && !u.deactivated).length
   const busy = create.isPending || setRole.isPending || deactivate.isPending ||
-    activate.isPending || resetPassword.isPending || resetCode.isPending
+    activate.isPending || resetPassword.isPending || resetCode.isPending ||
+    updateUser.isPending
 
   function onCreate(event: FormEvent) {
     event.preventDefault()
@@ -168,6 +178,7 @@ export default function Users() {
           email={issued.email}
           accessCode={issued.accessCode}
           tempPassword={issued.tempPassword}
+          warning={issued.warning}
           onClose={() => setIssued(null)}
         />
       )}
@@ -256,11 +267,34 @@ export default function Users() {
                     })
                 }}
                 onResetCode={() => {
-                  if (confirm(`${user.email} üçün yeni işçi kodu yaradılsın? Köhnə kod dərhal işləməyəcək.`))
-                    resetCode.mutate(user.id, {
-                      onSuccess: result =>
-                        setIssued({ email: user.email, accessCode: result.accessCode }),
+                  // Boş buraxılsa server təsadüfi kod verir; yazılsa həmin kod təyin
+                  // olunur — rəhbərlik «1655» kimi yadda qalan kod istəyir.
+                  const wanted = prompt(
+                    `${user.email} üçün kod.\n\n` +
+                    'Yadda qalan kod yazın (məs. 1655) və ya boş buraxın — sistem güclü kod yaradacaq.\n' +
+                    'Köhnə kod dərhal işləməyəcək.',
+                    '')
+                  if (wanted === null) return
+                  resetCode.mutate(
+                    { id: user.id, code: wanted.trim() || undefined },
+                    {
+                      onSuccess: result => setIssued({
+                        email: user.email,
+                        accessCode: result.accessCode,
+                        warning: result.warning,
+                      }),
                     })
+                }}
+                onEdit={() => {
+                  const newEmail = prompt('E-poçt ünvanı:', user.email)
+                  if (newEmail === null) return
+                  const newName = prompt('Ad Soyad:', user.displayName)
+                  if (newName === null) return
+                  updateUser.mutate({
+                    id: user.id,
+                    email: newEmail.trim(),
+                    displayName: newName.trim(),
+                  })
                 }}
               />
             ))}
@@ -275,9 +309,11 @@ export default function Users() {
         </table>
       </div>
 
-      {(setRole.isError || deactivate.isError || resetPassword.isError || resetCode.isError) && (
+      {(setRole.isError || deactivate.isError || resetPassword.isError ||
+        resetCode.isError || updateUser.isError) && (
         <p className="mt-3 text-sm text-red-700">
-          {((setRole.error ?? deactivate.error ?? resetPassword.error ?? resetCode.error) as Error).message}
+          {((setRole.error ?? deactivate.error ?? resetPassword.error ??
+             resetCode.error ?? updateUser.error) as Error).message}
         </p>
       )}
     </div>
@@ -285,7 +321,8 @@ export default function Users() {
 }
 
 function UserRowView({
-  user, isSelf, lastAdmin, busy, onRole, onDeactivate, onActivate, onResetPassword, onResetCode,
+  user, isSelf, lastAdmin, busy,
+  onRole, onDeactivate, onActivate, onResetPassword, onResetCode, onEdit,
 }: {
   user: UserRow
   isSelf: boolean
@@ -296,6 +333,7 @@ function UserRowView({
   onActivate: () => void
   onResetPassword: () => void
   onResetCode: () => void
+  onEdit: () => void
 }) {
   return (
     <tr className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
@@ -339,7 +377,15 @@ function UserRowView({
           title={user.hasCode ? 'Yeni kod verilir, köhnəsi ölür' : 'Bu hesabda kod yoxdur — yaradın'}
           className="rounded px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-50"
         >
-          {user.hasCode ? 'Kodu yenilə' : 'Kod ver'}
+          {user.hasCode ? 'Kodu dəyiş' : 'Kod ver'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onEdit}
+          className="rounded px-2 py-1 text-xs text-stone-500 hover:bg-stone-100"
+        >
+          Düzəliş
         </button>
         <button
           type="button"

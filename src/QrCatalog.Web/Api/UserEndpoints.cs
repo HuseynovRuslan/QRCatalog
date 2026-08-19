@@ -176,14 +176,41 @@ public static class UserEndpoints
         .RequireAntiforgery();
 
         // Kod itəndə (telefon itdi, işçi getdi) yenisi verilir — köhnəsi dərhal ölür.
+        // Gövdədə kod göndərilə bilər: rəhbərlik yadda saxlanan qısa kod istəyir
+        // («1655»). Belə kod ZƏİFDİR — bax CodeStrengthWarning və ThrottledCodeLogin.
         group.MapPost("/{id:guid}/reset-code", async (
-            Guid id, UserManager<ApplicationUser> userManager, ITenantContext tenant) =>
+            Guid id, SetAccessCodeRequest? request,
+            UserManager<ApplicationUser> userManager, ITenantContext tenant) =>
         {
             var (user, error) = await FindScopedAsync(userManager, tenant, id);
             if (user is null) return error!;
 
-            var accessCode = GenerateAccessCode();
-            user.AccessCodeHash = HashAccessCode(accessCode);
+            string accessCode;
+            if (!string.IsNullOrWhiteSpace(request?.Code))
+            {
+                var normalized = NormalizeCode(request.Code);
+                if (normalized.Length is < 4 or > 16)
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                        title: "Kod 4-16 simvol olmalıdır (hərf və rəqəm).");
+                accessCode = request.Code.Trim();
+            }
+            else
+            {
+                accessCode = GenerateAccessCode();
+            }
+
+            var hash = HashAccessCode(accessCode)!;
+
+            // Unikallıq: kod girişdə istifadəçini TAPMAQ üçündür. İki nəfərdə eyni
+            // kod olsa giriş qeyri-müəyyən olar — indeks buna icazə vermir, amma
+            // istifadəçi 500 yox, anlaşılan mesaj görməlidir.
+            var taken = await userManager.Users
+                .AnyAsync(u => u.AccessCodeHash == hash && u.Id != user.Id);
+            if (taken)
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: "Bu kod artıq başqa istifadəçidədir — başqasını seçin.");
+
+            user.AccessCodeHash = hash;
             var updated = await userManager.UpdateAsync(user);
             if (!updated.Succeeded)
                 return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
@@ -192,9 +219,60 @@ public static class UserEndpoints
             // Köhnə kodla açılmış sessiyalar da qapansın — ssenari «telefon itdi»dir
             await userManager.UpdateSecurityStampAsync(user);
 
-            return Results.Ok(new AccessCodeDto(accessCode));
+            return Results.Ok(new AccessCodeDto(accessCode, CodeStrengthWarning(accessCode)));
         })
         .RequireAntiforgery();
+
+        // E-poçt və ad düzəlişi. Bunsuz səhv yazılmış ünvanı düzəltmək üçün hesabı
+        // silib yenidən yaratmaq lazım gəlirdi — audit izi ilə birlikdə.
+        group.MapPut("/{id:guid}", async (
+            Guid id, UpdateUserRequest request,
+            UserManager<ApplicationUser> userManager, ITenantContext tenant) =>
+        {
+            var (user, error) = await FindScopedAsync(userManager, tenant, id);
+            if (user is null) return error!;
+
+            user.DisplayName = request.DisplayName?.Trim() ?? "";
+
+            if (!string.IsNullOrWhiteSpace(request.Email) &&
+                !string.Equals(request.Email, user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                // UserName də dəyişməlidir: giriş e-poçtla gedir, ikisi ayrılsa
+                // istifadəçi yeni ünvanla girə bilməz və səbəbi görünməz.
+                var setEmail = await userManager.SetEmailAsync(user, request.Email.Trim());
+                if (!setEmail.Succeeded)
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                        title: string.Join(" ", setEmail.Errors.Select(e => Translate(e))));
+
+                var setName = await userManager.SetUserNameAsync(user, request.Email.Trim());
+                if (!setName.Succeeded)
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                        title: string.Join(" ", setName.Errors.Select(e => Translate(e))));
+            }
+
+            var saved = await userManager.UpdateAsync(user);
+            if (!saved.Succeeded)
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: string.Join(" ", saved.Errors.Select(e => Translate(e))));
+
+            return Results.NoContent();
+        })
+        .RequireAntiforgery();
+    }
+
+    /// <summary>
+    /// Qısa kod rahatdır, amma zəifdir: kod həm şəxsiyyət, həm sirrdir, yəni
+    /// tapılan kod HESABIN ÖZÜDÜR. 4 rəqəm = 10 min variant. Sistem cəhdləri
+    /// boğur (bax ThrottledCodeLogin), amma istifadəçi bunu BİLMƏLİDİR.
+    /// </summary>
+    internal static string? CodeStrengthWarning(string code)
+    {
+        var normalized = NormalizeCode(code);
+        if (normalized.Length >= 8) return null;
+        if (normalized.All(char.IsDigit))
+            return $"{normalized.Length} rəqəmlik kod asan yadda qalır, amma zəifdir — " +
+                   "tam səlahiyyətli hesab üçün uzun kod tövsiyə olunur.";
+        return "Qısa kod asan yadda qalır, amma uzun koddan zəifdir.";
     }
 
     /// <summary>İstifadəçini TAPIB tenant sərhədini yoxlayır — başqa müəssisənin
@@ -250,20 +328,23 @@ public static class UserEndpoints
         return $"WM-{new string(chars, 0, 4)}-{new string(chars, 4, 4)}";
     }
 
+    /// <summary>Defis, boşluq və registr fərqini atır: «wm 4k7p 9x3m» = «WM-4K7P-9X3M».</summary>
+    internal static string NormalizeCode(string code) => new(code
+        .Where(char.IsLetterOrDigit)
+        .Select(char.ToUpperInvariant)
+        .ToArray());
+
     /// <summary>
-    /// Kodu normallaşdırıb hash-ləyir: defis, boşluq və registr fərqi nəzərə alınmır —
-    /// işçi «wm 4k7p 9x3m» yazsa da girə bilməlidir. Çox qısa girişlər <c>null</c>
-    /// qaytarır ki, təsadüfi boş sətir bazada kimləsə uyğun gəlməsin.
+    /// Kodu normallaşdırıb hash-ləyir. Minimum 4 simvol: rəhbərlik yadda saxlanan
+    /// qısa kod istəyir («1655»). Daha qısasına icazə verilmir — 3 simvol praktiki
+    /// olaraq açıq qapıdır və təsadüfən yazılmış «12» kiməsə uyğun gələ bilər.
     /// </summary>
     internal static string? HashAccessCode(string? code)
     {
         if (string.IsNullOrWhiteSpace(code)) return null;
 
-        var normalized = new string(code
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToUpperInvariant)
-            .ToArray());
-        if (normalized.Length < 8) return null;
+        var normalized = NormalizeCode(code);
+        if (normalized.Length < 4) return null;
 
         return Convert.ToHexString(
             SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(normalized)));
@@ -281,6 +362,9 @@ public sealed record CreateUserRequest(string Email, string? DisplayName, string
 public sealed record SetRoleRequest(string Role);
 public sealed record UserRowDto(
     Guid Id, string Email, string DisplayName, string Role, bool Deactivated, bool HasCode);
-public sealed record CreatedUserDto(Guid Id, string Email, string TempPassword, string AccessCode);
+public sealed record CreatedUserDto(
+    Guid Id, string Email, string TempPassword, string AccessCode);
 public sealed record TempPasswordDto(string TempPassword);
-public sealed record AccessCodeDto(string AccessCode);
+public sealed record AccessCodeDto(string AccessCode, string? Warning);
+public sealed record SetAccessCodeRequest(string? Code);
+public sealed record UpdateUserRequest(string? Email, string? DisplayName);

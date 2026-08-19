@@ -10,13 +10,15 @@ function safeReturnPath(raw: string | null): string | null {
   return raw
 }
 
-/* Kodu oxunaqlı saxlayır: işçi "wm4k7p9x3m" yazsa da server normallaşdırır, amma
-   ekranda defisli görünsün deyə yazıldıqca formatlanır. */
+/* Kodu oxunaqlı saxlayır. Sistem kodları WM-XXXX-XXXX formatındadır və qruplarla
+   daha rahat oxunur; qısa kodlar («1655») isə OLDUĞU KİMİ qalmalıdır — onları
+   «16-55» kimi bölmək kağızdakı ilə uyğunsuzluq yaradır və işçidə şübhə doğurur.
+   Server hər iki halda defis/boşluğu atır, yəni format yalnız görünüş məsələsidir. */
 function formatCode(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
-  if (clean.length <= 2) return clean
-  if (clean.length <= 6) return `${clean.slice(0, 2)}-${clean.slice(2)}`
-  return `${clean.slice(0, 2)}-${clean.slice(2, 6)}-${clean.slice(6)}`
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16)
+  if (!clean.startsWith('WM')) return clean
+  if (clean.length <= 6) return `WM-${clean.slice(2)}`
+  return `WM-${clean.slice(2, 6)}-${clean.slice(6, 10)}`
 }
 
 export default function Login() {

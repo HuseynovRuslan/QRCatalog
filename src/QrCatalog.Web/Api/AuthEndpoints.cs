@@ -72,23 +72,36 @@ public static class AuthEndpoints
         // müdafiə dəqiqədə 10 sorğu limitidir; kodda ~50 bit təsadüf var.
         group.MapPost("/login-code", async (
             LoginCodeRequest request,
+            HttpContext http,
+            CodeLoginThrottle throttle,
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager) =>
         {
-            var hash = UserEndpoints.HashAccessCode(request.Code);
-            if (hash is null)
-                return Results.Problem(statusCode: StatusCodes.Status401Unauthorized,
-                    title: "Kod yanlışdır.");
+            var ip = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-            var user = await userManager.Users.FirstOrDefaultAsync(u => u.AccessCodeHash == hash);
+            // Kod girişində kilidləyəcək hesab yoxdur (səhv kod heç kimə aid deyil),
+            // ona görə müdafiə cəhd sayğacıdır. Qısa kodlarda bu YEGANƏ maneədir.
+            if (!throttle.IsAllowed(ip))
+                return Results.Problem(statusCode: StatusCodes.Status429TooManyRequests,
+                    title: "Çox sayda uğursuz cəhd oldu. Bir müddət sonra yenidən sınayın.");
+
+            var hash = UserEndpoints.HashAccessCode(request.Code);
+            var user = hash is null
+                ? null
+                : await userManager.Users.FirstOrDefaultAsync(u => u.AccessCodeHash == hash);
+
             if (user is null)
+            {
+                throttle.RecordFailure(ip);
                 return Results.Problem(statusCode: StatusCodes.Status401Unauthorized,
                     title: "Kod yanlışdır.");
+            }
 
             if (UserEndpoints.IsDeactivated(user))
                 return Results.Problem(statusCode: StatusCodes.Status403Forbidden,
                     title: "Hesab deaktiv edilib — rəhbərliklə əlaqə saxlayın.");
 
+            throttle.RecordSuccess(ip);
             await signInManager.SignInAsync(user, new AuthenticationProperties
             {
                 IsPersistent = request.RememberMe,

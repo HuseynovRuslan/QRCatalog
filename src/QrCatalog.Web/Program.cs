@@ -84,6 +84,10 @@ try
         options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
     });
 
+    // Kod girişində uğursuz cəhd sayğacı — singleton, çünki pəncərə bütün sorğular
+    // arasında paylaşılmalıdır (bax CodeLoginThrottle: qısa kodların yeganə müdafiəsi).
+    builder.Services.AddSingleton<CodeLoginThrottle>();
+
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

@@ -232,6 +232,67 @@ public sealed class StaffAccessTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CustomShortCode_Works_WarnsAndStaysUnique()
+    {
+        if (_factory is null) return; // baza yoxdur
+
+        var admin = await LoginAsync();
+        var created = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/users",
+            new { email = "usta@test.az", displayName = "Usta", role = "Viewer" })).Content
+            .ReadFromJsonAsync<CreatedUserResponse>())!;
+
+        // 1. Rəhbərlik yadda qalan kod istəyir — «1655» qəbul olunmalı, AMMA
+        //    zəiflik barədə xəbərdarlıq gəlməlidir (səssizcə razılaşmaq yanlışdır)
+        var setRes = await SendJsonAsync(admin, HttpMethod.Post,
+            $"/api/admin/users/{created.Id}/reset-code", new { code = "1655" });
+        Assert.Equal(HttpStatusCode.OK, setRes.StatusCode);
+        var set = (await setRes.Content.ReadFromJsonAsync<AccessCodeResponse>())!;
+        Assert.Equal("1655", set.AccessCode);
+        Assert.NotNull(set.Warning);
+        Assert.Contains("zəif", set.Warning!);
+
+        // 2. Qısa kodla giriş işləyir
+        var worker = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        Assert.Equal(HttpStatusCode.OK,
+            (await SendJsonAsync(worker, HttpMethod.Post, "/api/auth/login-code",
+                new { code = "1655" })).StatusCode);
+
+        // 3. Köhnə sistem kodu ölüb
+        var stale = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await SendJsonAsync(stale, HttpMethod.Post, "/api/auth/login-code",
+                new { code = created.AccessCode })).StatusCode);
+
+        // 4. Eyni kod ikinci nəfərə VERİLMƏMƏLİDİR — yoxsa giriş qeyri-müəyyən olar
+        var second = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/users",
+            new { email = "usta2@test.az", displayName = "Usta 2", role = "Viewer" })).Content
+            .ReadFromJsonAsync<CreatedUserResponse>())!;
+        var clash = await SendJsonAsync(admin, HttpMethod.Post,
+            $"/api/admin/users/{second.Id}/reset-code", new { code = "16 55" });
+        Assert.Equal(HttpStatusCode.BadRequest, clash.StatusCode);
+        Assert.Contains("başqa istifadəçidədir", await clash.Content.ReadAsStringAsync());
+
+        // 5. Həddən qısa kod rədd olunur — 3 simvol praktiki olaraq açıq qapıdır
+        var tooShort = await SendJsonAsync(admin, HttpMethod.Post,
+            $"/api/admin/users/{second.Id}/reset-code", new { code = "12" });
+        Assert.Equal(HttpStatusCode.BadRequest, tooShort.StatusCode);
+
+        // 6. E-poçt düzəlişi: səhv yazılmış ünvan hesabı silmədən düzəlir
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await SendJsonAsync(admin, HttpMethod.Put, $"/api/admin/users/{second.Id}",
+                new { email = "duzgun@test.az", displayName = "Düzgün Ad" })).StatusCode);
+        var rows = (await admin.GetFromJsonAsync<List<UserRowResponse>>("/api/admin/users"))!;
+        var fixedRow = rows.Single(u => u.Id == second.Id);
+        Assert.Equal("duzgun@test.az", fixedRow.Email);
+        Assert.Equal("Düzgün Ad", fixedRow.DisplayName);
+        // Giriş e-poçtu da dəyişməlidir, yoxsa yeni ünvanla girmək mümkün olmaz
+        Assert.True((await SendJsonAsync(
+            _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true }),
+            HttpMethod.Post, "/api/auth/login",
+            new { email = "duzgun@test.az", password = second.TempPassword })).IsSuccessStatusCode);
+    }
+
+    [Fact]
     public async Task RememberMe_ControlsCookiePersistence()
     {
         if (_factory is null) return; // baza yoxdur
@@ -377,6 +438,7 @@ public sealed class StaffAccessTests : IAsyncLifetime
             $"/api/admin/users/{row.Id}/reset-code")).Content
             .ReadFromJsonAsync<AccessCodeResponse>())!;
         Assert.NotEqual(created.AccessCode, renewed.AccessCode);
+        Assert.Null(renewed.Warning); // sistem kodu güclüdür — xəbərdarlıq olmamalıdır
 
         var afterReset = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         Assert.Equal(HttpStatusCode.Unauthorized,
@@ -402,7 +464,7 @@ public sealed class StaffAccessTests : IAsyncLifetime
         string TargetType, Guid? TargetId, string Status, DateTime CreatedAtUtc, string? TargetName);
     private sealed record CreatedUserResponse(
         Guid Id, string Email, string TempPassword, string AccessCode);
-    private sealed record AccessCodeResponse(string AccessCode);
+    private sealed record AccessCodeResponse(string AccessCode, string? Warning);
     private sealed record TempPasswordResponse(string TempPassword);
     private sealed record UserRowResponse(Guid Id, string Email, string DisplayName,
         string Role, bool Deactivated, bool HasCode);

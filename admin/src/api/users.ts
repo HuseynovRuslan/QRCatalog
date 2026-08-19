@@ -67,9 +67,25 @@ export function useResetUserPassword() {
 }
 
 /* Kod itəndə yenisi verilir — köhnəsi dərhal ölür və o kodla açılmış
-   sessiyalar da bağlanır (ssenari «telefon itdi»dir). */
+   sessiyalar da bağlanır (ssenari «telefon itdi»dir).
+   `code` verilsə həmin kod təyin olunur (rəhbərlik yadda saxlanan qısa kod istəyir);
+   verilməsə server təsadüfi WM-XXXX-XXXX yaradır. */
 export function useResetUserCode() {
-  return useInvalidating((id: string) =>
-    api<{ accessCode: string }>(`/api/admin/users/${id}/reset-code`, { method: 'POST' }),
+  return useInvalidating(({ id, code }: { id: string; code?: string }) =>
+    api<{ accessCode: string; warning: string | null }>(
+      `/api/admin/users/${id}/reset-code`,
+      { method: 'POST', body: JSON.stringify({ code: code ?? null }) },
+    ),
+  )
+}
+
+/* E-poçt və ad düzəlişi — səhv yazılmış ünvanı düzəltmək üçün hesabı silmək lazım deyil. */
+export function useUpdateUser() {
+  return useInvalidating(({ id, email, displayName }:
+    { id: string; email: string; displayName: string }) =>
+    api<void>(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ email, displayName }),
+    }),
   )
 }
