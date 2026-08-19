@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test'
-import {
-  ADMIN_EMAIL, ADMIN_PASSWORD, apiGet, apiLogin, apiPost, apiPut, unique,
-} from './helpers'
+import { apiGet, apiLogin, apiPost, apiPut, uiLogin, unique } from './helpers'
 
 // Kritik axın 2: QR skan → məhsul səhifəsi → sorğu göndər
 test('QR səhifəsi açılır, sorğu göndərilir', async ({ page, request }) => {
@@ -99,13 +97,13 @@ test.describe('Mobil — işçi girişi', () => {
       await page.waitForURL(url =>
         url.pathname === '/admin/login' && url.searchParams.get('qayit') === `/q/${qr.token}`)
 
-      await page.getByLabel('E-poçt').fill(ADMIN_EMAIL)
-      await page.getByLabel('Parol').fill(ADMIN_PASSWORD)
-      await page.getByRole('button', { name: 'Daxil ol' }).click()
+      await uiLogin(page)
 
-      // Giriş bitəndə HƏMİN səhifəyə qayıdır, girişli olduğu üçün admin ekranı açılır
-      await expect(page).toHaveURL(new RegExp(`/admin/mehsullar/${product.id}`))
-      await expect(page.getByLabel('Ad')).toHaveValue(productName)
+      // Giriş bitəndə HƏMİN səhifəyə qayıdır, girişli olduğu üçün Q səhifəsi
+      // işçini məlumat ekranına (/i/{token}) yönləndirir — redaktora yox
+      await page.waitForURL(url => url.pathname === `/i/${qr.token}`)
+      await expect(page.getByRole('heading', { name: productName })).toBeVisible()
+      await expect(page.getByText('ədəd — işlək')).toBeVisible()
     } finally {
       // Parametrləri geri qaytar — təkrar cəhddə (retry) ilk test masaüstü ölçüdə
       // işləyir və panel oradaki «Göndər» düyməsini örtə bilər

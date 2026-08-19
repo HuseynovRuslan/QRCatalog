@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext } from '@playwright/test'
+import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@local.az'
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'Passw0rd!'
@@ -41,6 +41,19 @@ export async function apiPut(request: APIRequestContext, path: string, data: unk
   const { token } = (await tokenRes.json()) as { token: string }
   const res = await request.put(path, { headers: { 'X-XSRF-TOKEN': token }, data })
   expect(res.ok(), `${path}: ${res.status()}`).toBeTruthy()
+}
+
+/** Brauzerdə e-poçt+parol ilə giriş.
+ *
+ * Giriş forması İLK NÖVBƏDƏ işçi kodu istəyir (sahə işçisi üçün tək sahə),
+ * e-poçt+parol isə ikinci seçimdir. Ona görə əvvəlcə rejim dəyişdirilir —
+ * bu addım olmasa test «E-poçt sahəsi yoxdur» deyə 30 saniyə gözləyir. */
+export async function uiLogin(page: Page) {
+  await expect(page.getByText('İdarəetmə panelinə giriş')).toBeVisible()
+  await page.getByRole('button', { name: 'E-poçt və parolla giriş' }).click()
+  await page.getByLabel('E-poçt').fill(ADMIN_EMAIL)
+  await page.getByLabel('Parol').fill(ADMIN_PASSWORD)
+  await page.getByRole('button', { name: 'Daxil ol' }).click()
 }
 
 /** Unikal ad — testlər təkrar işə salınanda toqquşmasın. */

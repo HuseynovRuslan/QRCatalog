@@ -1,16 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { ADMIN_EMAIL, ADMIN_PASSWORD, apiLogin, apiPost, unique } from './helpers'
+import { apiLogin, apiPost, uiLogin, unique } from './helpers'
 
 // Kritik axın 1: admin girişi → kateqoriya yarat → siyahıda görün
 test('admin girir, kateqoriya yaradır', async ({ page }) => {
   await page.goto('/admin/')
 
   // Girişsiz → login səhifəsinə düşür
-  await expect(page.getByText('İdarəetmə panelinə giriş')).toBeVisible()
-
-  await page.getByLabel('E-poçt').fill(ADMIN_EMAIL)
-  await page.getByLabel('Parol').fill(ADMIN_PASSWORD)
-  await page.getByRole('button', { name: 'Daxil ol' }).click()
+  await uiLogin(page)
 
   // Dashboard açılır
   await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible()
@@ -55,9 +51,7 @@ test.describe('mobil admin', () => {
     })
 
     await page.goto('/admin/')
-    await page.getByLabel('E-poçt').fill(ADMIN_EMAIL)
-    await page.getByLabel('Parol').fill(ADMIN_PASSWORD)
-    await page.getByRole('button', { name: 'Daxil ol' }).click()
+    await uiLogin(page)
     await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible()
 
     const expectNoHorizontalOverflow = async () => {
