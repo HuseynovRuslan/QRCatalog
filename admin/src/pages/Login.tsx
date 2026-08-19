@@ -59,7 +59,8 @@ export default function Login() {
       <section className="login-panel">
         <form onSubmit={onSubmit} className="login-form">
           <div className="login-form-head">
-            <span className="login-mobile-mark">Q</span>
+            <img className="login-mobile-logo" src="/img/woodmark-brown.png"
+                 alt="WOODMARK" width={52} height={52} />
             <span className="eyebrow">XOŞ GƏLMİSİNİZ</span>
             <h2>İdarəetmə panelinə giriş</h2>
             <p>İş mühitinə davam etmək üçün məlumatlarınızı daxil edin.</p>

@@ -39,7 +39,12 @@
   column-gap: 13px;
 }
 
-.login-brand > span {
+/* Loqo iki sətri də əhatə edir: «WOODMARK» yuxarı, «İDARƏETMƏ PANELİ» aşağı
+   sətirdə, hər ikisi loqonun SAĞINDA. Bu qayda əvvəl yalnız `span`-a baxırdı;
+   nişan şəkilə çevriləndə uyğun gəlməyi dayandırdı və alt yazı loqonun altındaki
+   45px-lik sütuna sıxıldı. */
+.login-brand > span,
+.login-brand > img {
   grid-row: 1 / 3;
 }
 
@@ -192,7 +197,10 @@
   line-height: 1.6;
 }
 
-.login-mobile-mark {
+/* Telefonda sol brend paneli gizlənir — loqo forma başlığında görünür.
+   Əvvəl burada çərçivəli qutuda «Q» hərfi var idi: brend WOODMARK olandan
+   sonra o hərf heç nəyi ifadə etmirdi. */
+.login-mobile-logo {
   display: none;
 }
 
@@ -345,12 +353,12 @@
     padding: 32px 22px;
   }
 
-  .login-mobile-mark {
-    display: grid;
-    margin-bottom: 32px;
-    border-color: rgba(30, 73, 55, .2);
-    color: var(--forest-800);
-    background: var(--forest-50);
+  .login-mobile-logo {
+    display: block;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 28px;
+    object-fit: contain;
   }
 }
 
