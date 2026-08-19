@@ -33,6 +33,23 @@ export function useLogin() {
   })
 }
 
+/* Tək sahəli işçi girişi: kod həm şəxsiyyət, həm sirrdir — e-poçt tələb olunmur.
+   Sahə işçisi üçün iki sahə iki yazı səhvi deməkdir. */
+export function useLoginWithCode() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { code: string; rememberMe: boolean }) =>
+      api<UserInfo>('/api/auth/login-code', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: user => {
+      resetCsrfToken()
+      queryClient.setQueryData(['me'], user)
+    },
+  })
+}
+
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({

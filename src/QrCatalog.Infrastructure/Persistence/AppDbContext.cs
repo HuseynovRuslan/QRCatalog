@@ -36,6 +36,12 @@ public sealed class AppDbContext
         modelBuilder.Entity<ApplicationUser>(b =>
         {
             b.Property(u => u.DisplayName).HasMaxLength(200);
+            b.Property(u => u.AccessCodeHash).HasMaxLength(64);
+            // Unikal: kod girişdə istifadəçini TAPMAQ üçündür, iki nəfərdə eyni ola bilməz.
+            // Filtrli indeks — kodu olmayan istifadəçilər (null) toqquşmur.
+            b.HasIndex(u => u.AccessCodeHash)
+                .IsUnique()
+                .HasFilter("\"AccessCodeHash\" IS NOT NULL");
             b.HasOne<Company>()
                 .WithMany()
                 .HasForeignKey(u => u.CompanyId)

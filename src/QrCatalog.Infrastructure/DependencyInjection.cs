@@ -103,10 +103,21 @@ public static class DependencyInjection
             options.SlidingExpiration = true;
             options.ExpireTimeSpan = TimeSpan.FromHours(8);
 
-            // SPA/API cookie sxemində redirect mənasızdır — status kodu qaytar
+            // API sorğusu status kodu gözləyir — SPA onu tutub giriş ekranı göstərir.
+            // AMMA serverdə render olunan səhifələr (məs. işçi məlumat ekranı /i/{token})
+            // brauzerdə açılır: orada boş 401 telefonda çıxılmaz vəziyyətdir — işçi
+            // skamyanın yanında dayanıb ağ ekrana baxır. Ona görə səhifə sorğusu giriş
+            // formasına yönləndirilir və `qayit` ilə həmin ünvana qayıdır.
             options.Events.OnRedirectToLogin = ctx =>
             {
-                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                if (ctx.Request.Path.StartsWithSegments("/api"))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                }
+
+                var target = ctx.Request.Path + ctx.Request.QueryString;
+                ctx.Response.Redirect($"/admin/login?qayit={Uri.EscapeDataString(target)}");
                 return Task.CompletedTask;
             };
             options.Events.OnRedirectToAccessDenied = ctx =>

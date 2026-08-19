@@ -396,3 +396,34 @@
   color: #8a948d;
   font-size: 11px;
 }
+
+/* İşçi kodu sahəsi: kod monospace olanda oxunur və səhv yazılmır (I/l, 0/O
+   fərqi görünür). Böyük hərflər — server onsuz da normallaşdırır, amma ekranda
+   kodun kağızdakı ilə eyni görünməsi işçinin şübhəsini azaldır. */
+.login-code-input {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* İkinci yol — qəsdən solğun düymə: işçilər kodla girir, e-poçt+parol adminə
+   lazımdır və gündə bir dəfə də olsa lazım olanda tapılmalıdır. */
+.login-mode-switch {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  border: 0;
+  background: none;
+  padding: 10px;
+  color: #6d776f;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-mode-switch:hover {
+  color: var(--forest-800, #205444);
+}

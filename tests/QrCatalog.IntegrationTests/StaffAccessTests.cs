@@ -108,7 +108,7 @@ public sealed class StaffAccessTests : IAsyncLifetime
         //    Bu assert sınırsa keş girişli sorğuya cavab verib — ən təhlükəli reqressiya.
         var staff = await admin.GetAsync($"/q/{qr.Token}");
         Assert.Equal(HttpStatusCode.Redirect, staff.StatusCode);
-        Assert.Equal($"/admin/mehsullar/{product.Id}", staff.Headers.Location?.ToString());
+        Assert.Equal($"/i/{qr.Token}", staff.Headers.Location?.ToString());
 
         // 3. Qonaq yenidən: keş qonaqlar üçün sağdır, işçi cavabı ora sızmayıb
         var guestSecond = await guest.GetAsync($"/q/{qr.Token}");
@@ -134,7 +134,7 @@ public sealed class StaffAccessTests : IAsyncLifetime
 
         var staffCat = await admin.GetAsync($"/q/{catQr.Token}");
         Assert.Equal(HttpStatusCode.Redirect, staffCat.StatusCode);
-        Assert.Equal("/admin/kateqoriyalar", staffCat.Headers.Location?.ToString());
+        Assert.Equal($"/i/{catQr.Token}", staffCat.Headers.Location?.ToString());
         await admin.GetAsync($"/q/{catQr.Token}");
 
         await Task.Delay(2000); // asinxron yazıcıya vaxt — dərhal yoxlamaq yalançı yaşıl verər
@@ -271,14 +271,141 @@ public sealed class StaffAccessTests : IAsyncLifetime
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task StaffInfoPage_AnswersManagementQuestions()
+    {
+        if (_factory is null) return; // baza yoxdur
+
+        var admin = await LoginAsync();
+
+        var category = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/categories",
+            new { name = "Skamyalar", codePrefix = "SK" })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+        var product = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/products",
+            new { name = "Bağ skamyası «İpək»", categoryId = category.Id, sku = "SK-IP-AK" })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+        await SendJsonAsync(admin, HttpMethod.Post, $"/api/admin/products/{product.Id}/publish");
+
+        // İki obyekt, fərqli saylarla — «hara qoymuşuq, neçə dənə» sualının cavabı
+        var qebele = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/sites",
+            new { name = "Qəbələ dağ oteli", kind = "hotel", latitude = 40.98, longitude = 47.84 })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+        var park = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/sites",
+            new { name = "Dənizkənarı park", kind = "park", latitude = 40.37, longitude = 49.84 })).Content
+            .ReadFromJsonAsync<IdResponse>())!;
+
+        await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/units/bulk",
+            new { productId = product.Id, siteId = qebele.Id, quantity = 3 });
+        await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/units/bulk",
+            new { productId = product.Id, siteId = park.Id, quantity = 7 });
+        // Anbardaki nüsxələr obyekt siyahısına DÜŞMƏMƏLİDİR, amma ümumi saya düşür
+        await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/units/bulk",
+            new { productId = product.Id, siteId = (Guid?)null, quantity = 2 });
+
+        var qr = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/qrcodes",
+            new { targetType = "product", targetId = product.Id })).Content
+            .ReadFromJsonAsync<QrCodeResponse>())!;
+
+        var page = await admin.GetAsync($"/i/{qr.Token}");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var html = await page.Content.ReadAsStringAsync();
+
+        Assert.Contains("Bağ skamyası «İpək»", html);
+        Assert.Contains("Qəbələ dağ oteli", html);
+        Assert.Contains("Dənizkənarı park", html);
+        Assert.Contains("SK-IP-AK", html);
+        // 3 + 7 quraşdırılıb, 2 anbarda → işlək cəmi 12
+        Assert.Contains(">12<", html);
+
+        // Qonaq bu ekranı GÖRMƏMƏLİDİR — daxili məlumatdır
+        var guest = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        var guestTry = await guest.GetAsync($"/i/{qr.Token}");
+        Assert.Equal(HttpStatusCode.Redirect, guestTry.StatusCode);
+        Assert.Contains("/admin/login", guestTry.Headers.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task AccessCode_LogsInWithSingleField()
+    {
+        if (_factory is null) return; // baza yoxdur
+
+        var admin = await LoginAsync();
+
+        var created = (await (await SendJsonAsync(admin, HttpMethod.Post, "/api/admin/users",
+            new { email = "brigada@test.az", displayName = "Briqadir", role = "Viewer" })).Content
+            .ReadFromJsonAsync<CreatedUserResponse>())!;
+
+        Assert.StartsWith("WM-", created.AccessCode);
+        Assert.Equal(12, created.AccessCode.Length); // WM-XXXX-XXXX
+
+        // 1. Kod ilə giriş — e-poçt tələb olunmur
+        var worker = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            HandleCookies = true,
+            AllowAutoRedirect = false,
+        });
+        Assert.Equal(HttpStatusCode.OK,
+            (await SendJsonAsync(worker, HttpMethod.Post, "/api/auth/login-code",
+                new { code = created.AccessCode, rememberMe = true })).StatusCode);
+        Assert.True((await worker.GetAsync("/api/admin/products")).IsSuccessStatusCode);
+
+        // 2. Defis, boşluq və registr fərqi bağışlanır — işçi kodu əl ilə yazır
+        var sloppy = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var messy = created.AccessCode.Replace("-", " ").ToLowerInvariant();
+        Assert.Equal(HttpStatusCode.OK,
+            (await SendJsonAsync(sloppy, HttpMethod.Post, "/api/auth/login-code",
+                new { code = messy })).StatusCode);
+
+        // 3. Səhv kod → 401, boş kod → 401 (boş sətir kiməsə uyğun gəlməməlidir)
+        var stranger = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await SendJsonAsync(stranger, HttpMethod.Post, "/api/auth/login-code",
+                new { code = "WM-AAAA-BBBB" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await SendJsonAsync(stranger, HttpMethod.Post, "/api/auth/login-code",
+                new { code = "" })).StatusCode);
+
+        // 4. Kod yenilənəndə köhnəsi DƏRHAL ölür
+        var users = (await admin.GetFromJsonAsync<List<UserRowResponse>>("/api/admin/users"))!;
+        var row = users.Single(u => u.Email == "brigada@test.az");
+        Assert.True(row.HasCode);
+
+        var renewed = (await (await SendJsonAsync(admin, HttpMethod.Post,
+            $"/api/admin/users/{row.Id}/reset-code")).Content
+            .ReadFromJsonAsync<AccessCodeResponse>())!;
+        Assert.NotEqual(created.AccessCode, renewed.AccessCode);
+
+        var afterReset = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await SendJsonAsync(afterReset, HttpMethod.Post, "/api/auth/login-code",
+                new { code = created.AccessCode })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK,
+            (await SendJsonAsync(afterReset, HttpMethod.Post, "/api/auth/login-code",
+                new { code = renewed.AccessCode })).StatusCode);
+
+        // 5. Deaktiv hesabın kodu işləmir
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await SendJsonAsync(admin, HttpMethod.Post,
+                $"/api/admin/users/{row.Id}/deactivate")).StatusCode);
+        var blocked = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await SendJsonAsync(blocked, HttpMethod.Post, "/api/auth/login-code",
+                new { code = renewed.AccessCode })).StatusCode);
+    }
+
     private sealed record AntiforgeryResponse(string Token);
     private sealed record IdResponse(Guid Id);
     private sealed record QrCodeResponse(Guid Id, string Token, string HumanCode,
         string TargetType, Guid? TargetId, string Status, DateTime CreatedAtUtc, string? TargetName);
-    private sealed record CreatedUserResponse(Guid Id, string Email, string TempPassword);
+    private sealed record CreatedUserResponse(
+        Guid Id, string Email, string TempPassword, string AccessCode);
+    private sealed record AccessCodeResponse(string AccessCode);
     private sealed record TempPasswordResponse(string TempPassword);
     private sealed record UserRowResponse(Guid Id, string Email, string DisplayName,
-        string Role, bool Deactivated);
+        string Role, bool Deactivated, bool HasCode);
     private sealed record TopProductResponse(string Name, int Count);
     private sealed record DashboardResponse(int ProductsTotal, int ProductsPublished,
         int NewInquiries, int Scans30d, List<TopProductResponse> TopProducts, int UnscannedCodes);

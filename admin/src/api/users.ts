@@ -7,6 +7,7 @@ export interface UserRow {
   displayName: string
   role: string
   deactivated: boolean
+  hasCode: boolean
 }
 
 export const ROLE_OPTIONS = [
@@ -34,7 +35,7 @@ function useInvalidating<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) 
 
 export function useCreateUser() {
   return useInvalidating((input: { email: string; displayName: string; role: string }) =>
-    api<{ id: string; email: string; tempPassword: string }>('/api/admin/users', {
+    api<{ id: string; email: string; tempPassword: string; accessCode: string }>('/api/admin/users', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
@@ -62,5 +63,13 @@ export function useActivateUser() {
 export function useResetUserPassword() {
   return useInvalidating((id: string) =>
     api<{ tempPassword: string }>(`/api/admin/users/${id}/reset-password`, { method: 'POST' }),
+  )
+}
+
+/* Kod itəndə yenisi verilir — köhnəsi dərhal ölür və o kodla açılmış
+   sessiyalar da bağlanır (ssenari «telefon itdi»dir). */
+export function useResetUserCode() {
+  return useInvalidating((id: string) =>
+    api<{ accessCode: string }>(`/api/admin/users/${id}/reset-code`, { method: 'POST' }),
   )
 }

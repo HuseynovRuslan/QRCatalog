@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
@@ -61,6 +62,45 @@ public static class AuthEndpoints
         .RequireRateLimiting("login")
         .RequireAntiforgery();
 
+        // TƏK SAHƏLİ İŞÇİ GİRİŞİ. Sahə işçisi üçün e-poçt+parol iki sahə, iki
+        // klaviatura keçidi və bir yazı səhvi deməkdir — skamyanın yanında, günəşin
+        // altında, əlcəklə. Kod həm şəxsiyyət, həm sirrdir: sistem onu generasiya edir
+        // (WM-XXXX-XXXX), işçi bir dəfə yazır, «Məni xatırla» ilə 30 gün unudur.
+        //
+        // Kod hash-i ilə axtarılır (bax ApplicationUser.AccessCodeHash). Hesabın
+        // hansı olduğunu bilmədən lockout işlətmək mümkün deyil, ona görə burada
+        // müdafiə dəqiqədə 10 sorğu limitidir; kodda ~50 bit təsadüf var.
+        group.MapPost("/login-code", async (
+            LoginCodeRequest request,
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager) =>
+        {
+            var hash = UserEndpoints.HashAccessCode(request.Code);
+            if (hash is null)
+                return Results.Problem(statusCode: StatusCodes.Status401Unauthorized,
+                    title: "Kod yanlışdır.");
+
+            var user = await userManager.Users.FirstOrDefaultAsync(u => u.AccessCodeHash == hash);
+            if (user is null)
+                return Results.Problem(statusCode: StatusCodes.Status401Unauthorized,
+                    title: "Kod yanlışdır.");
+
+            if (UserEndpoints.IsDeactivated(user))
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden,
+                    title: "Hesab deaktiv edilib — rəhbərliklə əlaqə saxlayın.");
+
+            await signInManager.SignInAsync(user, new AuthenticationProperties
+            {
+                IsPersistent = request.RememberMe,
+                ExpiresUtc = request.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null,
+            });
+
+            var codeRoles = await userManager.GetRolesAsync(user);
+            return Results.Ok(new UserInfo(user.Email!, user.DisplayName, codeRoles, user.CompanyId));
+        })
+        .RequireRateLimiting("login")
+        .RequireAntiforgery();
+
         // İşçi müvəqqəti parolla girib özü dəyişir — SMTP olmadığı üçün "unutdum" axını
         // yoxdur, bu isə minimum gigiyenadır: admin işçinin daimi parolunu BİLMƏMƏLİDİR.
         group.MapPost("/change-password", async (
@@ -113,6 +153,8 @@ public static class AuthEndpoints
 }
 
 public sealed record LoginRequest(string Email, string Password, bool RememberMe = false);
+
+public sealed record LoginCodeRequest(string Code, bool RememberMe = false);
 
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 

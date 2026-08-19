@@ -1,0 +1,204 @@
+@page "/i/{token}"
+@model QrCatalog.Web.Pages.IModel
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = null; // müştəri layout-u deyil: bu daxili ekrandır, brend başlığı və
+                   // «Kolleksiyaya bax» footer-i burada mənasızdır
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.Title — WOODMARK</title>
+    <link rel="icon" href="~/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" />
+    <meta name="theme-color" content="#173f32" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="staff-body">
+    <header class="staff-top">
+        <a class="staff-top__brand" href="/admin/">
+            <img src="~/img/woodmark-cream.png" alt="" width="30" height="30" />
+            <span>WOODMARK</span>
+        </a>
+        <span class="staff-top__tag">DAXİLİ MƏLUMAT</span>
+    </header>
+
+    <main class="staff-wrap">
+        @if (Model.Product is { } p)
+        {
+            <section class="staff-head">
+                @if (p.ImageUrl is not null)
+                {
+                    <img class="staff-head__img" src="@p.ImageUrl" alt="" width="96" height="96" loading="lazy" />
+                }
+                <div class="staff-head__copy">
+                    <span class="staff-eyebrow">@(p.CategoryName ?? "Kateqoriyasız")</span>
+                    <h1>@p.Name</h1>
+                    <div class="staff-chips">
+                        @if (p.Sku is not null)
+                        {
+                            <span class="staff-chip staff-chip--mono">@p.Sku</span>
+                        }
+                        @if (Model.HumanCode is not null)
+                        {
+                            <span class="staff-chip staff-chip--mono">@Model.HumanCode</span>
+                        }
+                        <span class="staff-chip @(p.Published ? "staff-chip--ok" : "staff-chip--warn")">
+                            @(p.Published ? "Kataloqda dərc olunub" : "Kataloqda görünmür")
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            @* Ən çox soruşulan rəqəm birinci və ən böyük: «neçə dənəmiz var».
+               Yanındakılar onu izah edir ki, rəqəm mübahisə doğurmasın. *@
+            <section class="staff-count">
+                <div class="staff-count__main">
+                    <strong>@p.Total</strong>
+                    <span>ədəd — işlək</span>
+                </div>
+                <dl class="staff-count__split">
+                    <div>
+                        <dt>Quraşdırılıb</dt>
+                        <dd>@p.Installed</dd>
+                    </div>
+                    <div>
+                        <dt>Anbarda</dt>
+                        <dd>@p.InStock</dd>
+                    </div>
+                    <div>
+                        <dt>Təmirdə</dt>
+                        <dd>@p.InRepair</dd>
+                    </div>
+                    @if (p.Removed > 0)
+                    {
+                        <div class="is-muted">
+                            <dt>Çıxarılıb</dt>
+                            <dd>@p.Removed</dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+
+            <section class="staff-block">
+                <h2>Hara quraşdırmışıq</h2>
+                @if (p.Sites.Count == 0)
+                {
+                    <p class="staff-empty">
+                        Bu modeldən heç bir obyektə quraşdırılmayıb — nüsxələr anbardadır
+                        ya da hələ qeydə alınmayıb.
+                    </p>
+                }
+                else
+                {
+                    <p class="staff-note">@p.Sites.Count obyektdə, cəmi @p.Installed ədəd</p>
+                    <ul class="staff-sites">
+                        @foreach (var site in p.Sites)
+                        {
+                            <li>
+                                <div class="staff-site__row">
+                                    <span class="staff-site__name">@site.Name</span>
+                                    <span class="staff-site__count">@site.Count əd.</span>
+                                </div>
+                                <div class="staff-site__meta">
+                                    <span>@site.Kind</span>
+                                    @if (site.Address is not null)
+                                    {
+                                        <span>· @site.Address</span>
+                                    }
+                                    @if (site.LastInstalledOn is { } installed)
+                                    {
+                                        <span>· quraşdırılıb: @installed.ToString("dd.MM.yyyy")</span>
+                                    }
+                                </div>
+                                @* Nüsxə kodları zəng gələndə lazım olur: «hansı skamya»
+                                   sualına cavab budur. Çox olanda siyahı səhifəni boğmasın
+                                   deyə açılıb-bağlanır. *@
+                                <details class="staff-site__codes">
+                                    <summary>Nüsxə kodları (@site.UnitCodes.Count)</summary>
+                                    <p>@string.Join(" · ", site.UnitCodes)</p>
+                                </details>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="staff-block">
+                <h2>Müştəri marağı</h2>
+                <p class="staff-note">
+                    Son 30 gündə bu modelin etiketləri <strong>@p.Scans30d dəfə</strong> skan olunub.
+                    <span class="staff-hint">Öz işçilərimizin skanları bu saya düşmür.</span>
+                </p>
+            </section>
+
+            <nav class="staff-actions">
+                <a class="staff-btn staff-btn--ghost" href="/admin/vahidler?mehsul=@p.Id">
+                    Xəritədə göstər
+                </a>
+                @if (Model.CanEdit)
+                {
+                    <a class="staff-btn" href="/admin/mehsullar/@p.Id">Redaktə et</a>
+                }
+            </nav>
+        }
+        else if (Model.Category is { } c)
+        {
+            <section class="staff-head">
+                <div class="staff-head__copy">
+                    <span class="staff-eyebrow">KATEQORİYA</span>
+                    <h1>@c.Name</h1>
+                    @if (Model.HumanCode is not null)
+                    {
+                        <div class="staff-chips">
+                            <span class="staff-chip staff-chip--mono">@Model.HumanCode</span>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="staff-block">
+                <h2>Bu kateqoriyadaki modellər</h2>
+                @if (c.Products.Count == 0)
+                {
+                    <p class="staff-empty">Bu kateqoriyada hələ model yoxdur.</p>
+                }
+                else
+                {
+                    <ul class="staff-sites">
+                        @foreach (var product in c.Products)
+                        {
+                            <li>
+                                <div class="staff-site__row">
+                                    <a class="staff-site__name" href="/admin/mehsullar/@product.Id">@product.Name</a>
+                                    <span class="staff-site__count">@product.InstalledCount əd.</span>
+                                </div>
+                                <div class="staff-site__meta">
+                                    @if (product.Sku is not null)
+                                    {
+                                        <span>@product.Sku · </span>
+                                    }
+                                    <span>@product.SiteCount obyektdə</span>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <nav class="staff-actions">
+                <a class="staff-btn staff-btn--ghost" href="/admin/kateqoriyalar">Kateqoriyalar</a>
+            </nav>
+        }
+    </main>
+
+    <footer class="staff-foot">
+        <a href="/admin/">İdarəetmə paneli</a>
+        <span>·</span>
+        <a href="/katalog">Müştəri kataloqu</a>
+    </footer>
+</body>
+</html>

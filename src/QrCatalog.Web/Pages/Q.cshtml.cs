@@ -91,13 +91,10 @@ public sealed class QModel : PageModel
             Guid.TryParse(User.FindFirst(AppClaims.CompanyId)?.Value, out var staffCompany) &&
             staffCompany == qrCode.CompanyId)
         {
-            return Redirect(qrCode.TargetType switch
-            {
-                QrTargetType.Product when qrCode.TargetId is { } productId =>
-                    $"/admin/mehsullar/{productId}",
-                QrTargetType.Category => "/admin/kateqoriyalar",
-                _ => "/admin/qr",
-            });
+            // Hədəf REDAKTOR deyil, məlumat ekranıdır: sahədə duran adamın sualı
+            // «bu nədir, neçə dənəmiz var, hara qoymuşuq»dur. Redaktəyə keçid o
+            // səhifədə düymədir — icazəsi olana görünür.
+            return Redirect($"/i/{qrCode.Token}");
         }
 
         HumanCode = qrCode.HumanCode;

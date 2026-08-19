@@ -45,7 +45,8 @@ public static class UserEndpoints
                 items.Add(new UserRowDto(
                     user.Id, user.Email ?? "", user.DisplayName,
                     roles.FirstOrDefault() ?? "—",
-                    IsDeactivated(user)));
+                    IsDeactivated(user),
+                    user.AccessCodeHash is not null));
             }
 
             return Results.Ok(items);
@@ -74,6 +75,11 @@ public static class UserEndpoints
                 LockoutEnabled = true,
             };
 
+            // Hər yeni işçi HƏM kod, həm parol alır: kod telefonda tək sahə ilə girmək
+            // üçün, parol isə kompüterdən e-poçtla girmək istəyənlər üçün.
+            var accessCode = GenerateAccessCode();
+            user.AccessCodeHash = HashAccessCode(accessCode);
+
             var tempPassword = GenerateTempPassword();
             var created = await userManager.CreateAsync(user, tempPassword);
             if (!created.Succeeded)
@@ -85,7 +91,7 @@ public static class UserEndpoints
             // Müvəqqəti parol yalnız BU cavabda görünür — heç yerdə saxlanılmır.
             // Admin onu işçiyə verir, işçi girib dəyişir.
             return Results.Created($"/api/admin/users/{user.Id}",
-                new CreatedUserDto(user.Id, user.Email!, tempPassword));
+                new CreatedUserDto(user.Id, user.Email!, tempPassword, accessCode));
         })
         .RequireAntiforgery();
 
@@ -168,6 +174,27 @@ public static class UserEndpoints
             return Results.Ok(new TempPasswordDto(tempPassword));
         })
         .RequireAntiforgery();
+
+        // Kod itəndə (telefon itdi, işçi getdi) yenisi verilir — köhnəsi dərhal ölür.
+        group.MapPost("/{id:guid}/reset-code", async (
+            Guid id, UserManager<ApplicationUser> userManager, ITenantContext tenant) =>
+        {
+            var (user, error) = await FindScopedAsync(userManager, tenant, id);
+            if (user is null) return error!;
+
+            var accessCode = GenerateAccessCode();
+            user.AccessCodeHash = HashAccessCode(accessCode);
+            var updated = await userManager.UpdateAsync(user);
+            if (!updated.Succeeded)
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: string.Join(" ", updated.Errors.Select(e => Translate(e))));
+
+            // Köhnə kodla açılmış sessiyalar da qapansın — ssenari «telefon itdi»dir
+            await userManager.UpdateSecurityStampAsync(user);
+
+            return Results.Ok(new AccessCodeDto(accessCode));
+        })
+        .RequireAntiforgery();
     }
 
     /// <summary>İstifadəçini TAPIB tenant sərhədini yoxlayır — başqa müəssisənin
@@ -208,6 +235,40 @@ public static class UserEndpoints
         return new string(body) + "Wm" + RandomNumberGenerator.GetInt32(2, 10);
     }
 
+    /// <summary>
+    /// İşçi kodu: <c>WM-XXXX-XXXX</c>. Əlifbada qarışdırılan simvol yoxdur (0/O, 1/I/L,
+    /// 5/S, 2/Z) — kod telefonda diktə olunur və günəşin altında ekrandan oxunur.
+    /// 8 simvol × 28 variant ≈ 38 bit: dəqiqədə 10 cəhd limiti ilə kobud güc real deyil.
+    /// Defislər yalnız oxunuş üçündür, yoxlamada atılır.
+    /// </summary>
+    private static string GenerateAccessCode()
+    {
+        const string alphabet = "ABCDEFGHJKMNPQRTUVWXY34689";
+        var chars = new char[8];
+        for (var i = 0; i < chars.Length; i++)
+            chars[i] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
+        return $"WM-{new string(chars, 0, 4)}-{new string(chars, 4, 4)}";
+    }
+
+    /// <summary>
+    /// Kodu normallaşdırıb hash-ləyir: defis, boşluq və registr fərqi nəzərə alınmır —
+    /// işçi «wm 4k7p 9x3m» yazsa da girə bilməlidir. Çox qısa girişlər <c>null</c>
+    /// qaytarır ki, təsadüfi boş sətir bazada kimləsə uyğun gəlməsin.
+    /// </summary>
+    internal static string? HashAccessCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return null;
+
+        var normalized = new string(code
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToUpperInvariant)
+            .ToArray());
+        if (normalized.Length < 8) return null;
+
+        return Convert.ToHexString(
+            SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(normalized)));
+    }
+
     private static string Translate(IdentityError error) => error.Code switch
     {
         "DuplicateEmail" or "DuplicateUserName" => "Bu e-poçt artıq qeydiyyatdadır.",
@@ -218,6 +279,8 @@ public static class UserEndpoints
 
 public sealed record CreateUserRequest(string Email, string? DisplayName, string Role);
 public sealed record SetRoleRequest(string Role);
-public sealed record UserRowDto(Guid Id, string Email, string DisplayName, string Role, bool Deactivated);
-public sealed record CreatedUserDto(Guid Id, string Email, string TempPassword);
+public sealed record UserRowDto(
+    Guid Id, string Email, string DisplayName, string Role, bool Deactivated, bool HasCode);
+public sealed record CreatedUserDto(Guid Id, string Email, string TempPassword, string AccessCode);
 public sealed record TempPasswordDto(string TempPassword);
+public sealed record AccessCodeDto(string AccessCode);
