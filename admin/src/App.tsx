@@ -7,6 +7,7 @@ import ProductEdit from './pages/ProductEdit'
 import QrCodes from './pages/QrCodes'
 import Sites from './pages/Sites'
 import Units from './pages/Units'
+import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Inquiries from './pages/Inquiries'
 import RequireAuth from './components/RequireAuth'
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="obyektler" element={<Sites />} />
         <Route path="vahidler" element={<Units />} />
         <Route path="muracietler" element={<Inquiries />} />
+        <Route path="istifadeciler" element={<Users />} />
         <Route path="parametrler" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

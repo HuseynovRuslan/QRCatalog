@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using QrCatalog.Infrastructure.Identity;
@@ -29,20 +30,63 @@ public static class AuthEndpoints
                 return Results.Problem(statusCode: StatusCodes.Status401Unauthorized,
                     title: "E-poçt və ya parol yanlışdır.");
 
-            var result = await signInManager.PasswordSignInAsync(
-                user, request.Password, isPersistent: true, lockoutOnFailure: true);
+            // Deaktiv hesab lockout üzərində qurulub — amma istifadəçiyə "5 dəqiqəlik
+            // kilid" demək yalan olardı, açıq mesaj verilir
+            if (UserEndpoints.IsDeactivated(user))
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden,
+                    title: "Hesab deaktiv edilib — rəhbərliklə əlaqə saxlayın.");
 
-            if (result.IsLockedOut)
+            var check = await signInManager.CheckPasswordSignInAsync(
+                user, request.Password, lockoutOnFailure: true);
+
+            if (check.IsLockedOut)
                 return Results.Problem(statusCode: StatusCodes.Status423Locked,
                     title: "Çox sayda uğursuz cəhd — hesab 5 dəqiqəlik kilidləndi.");
-            if (!result.Succeeded)
+            if (!check.Succeeded)
                 return Results.Problem(statusCode: StatusCodes.Status401Unauthorized,
                     title: "E-poçt və ya parol yanlışdır.");
+
+            // "Məni xatırla": sahə işçisi telefonda 30 gün parol görmür. İşarələnməyibsə
+            // sessiya cookie-si (brauzer bağlananda gedir), bilet 8 saat yaşayır —
+            // ofis kompüteri üçün düzgün davranış.
+            await signInManager.SignInAsync(user, new AuthenticationProperties
+            {
+                IsPersistent = request.RememberMe,
+                ExpiresUtc = request.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null,
+            });
 
             var roles = await userManager.GetRolesAsync(user);
             return Results.Ok(new UserInfo(user.Email!, user.DisplayName, roles, user.CompanyId));
         })
         .RequireRateLimiting("login")
+        .RequireAntiforgery();
+
+        // İşçi müvəqqəti parolla girib özü dəyişir — SMTP olmadığı üçün "unutdum" axını
+        // yoxdur, bu isə minimum gigiyenadır: admin işçinin daimi parolunu BİLMƏMƏLİDİR.
+        group.MapPost("/change-password", async (
+            ChangePasswordRequest request,
+            ClaimsPrincipal principal,
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager) =>
+        {
+            var user = await userManager.GetUserAsync(principal);
+            if (user is null)
+                return Results.Unauthorized();
+
+            var result = await userManager.ChangePasswordAsync(
+                user, request.CurrentPassword, request.NewPassword);
+            if (!result.Succeeded)
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                    title: result.Errors.Any(e => e.Code == "PasswordMismatch")
+                        ? "Hazırkı parol yanlışdır."
+                        : "Yeni parol tələblərə uymur: ən azı 8 simvol, böyük və kiçik hərf, rəqəm.");
+
+            // ChangePasswordAsync security stamp-ı yenilədi — bu sessiya yaşasın,
+            // digər cihazlardaki köhnə sessiyalar isə 5 dəqiqə içində düşsün
+            await signInManager.RefreshSignInAsync(user);
+            return Results.NoContent();
+        })
+        .RequireAuthorization()
         .RequireAntiforgery();
 
         group.MapPost("/logout", async (SignInManager<ApplicationUser> signInManager) =>
@@ -68,6 +112,8 @@ public static class AuthEndpoints
     }
 }
 
-public sealed record LoginRequest(string Email, string Password);
+public sealed record LoginRequest(string Email, string Password, bool RememberMe = false);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 public sealed record UserInfo(string Email, string DisplayName, IList<string> Roles, Guid? CompanyId);

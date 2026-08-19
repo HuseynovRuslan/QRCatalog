@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useChangePassword } from '../api/auth'
 import { useSaveSettings, useSettings } from '../api/settings'
 
 export default function Settings() {
@@ -68,6 +69,74 @@ export default function Settings() {
           <span className="ml-3 text-sm text-emerald-800">Saxlanıldı ✓</span>
         )}
       </form>
+
+      <PasswordSection />
     </div>
+  )
+}
+
+/* Müvəqqəti parolla girən işçi daimi parolunu BURADAN qoyur — SMTP olmadığı üçün
+   "unutdum" axını yoxdur, bu isə minimum gigiyenadır. */
+function PasswordSection() {
+  const change = useChangePassword()
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [repeat, setRepeat] = useState('')
+  const mismatch = repeat.length > 0 && next !== repeat
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (mismatch) return
+    change.mutate(
+      { currentPassword: current, newPassword: next },
+      { onSuccess: () => { setCurrent(''); setNext(''); setRepeat('') } },
+    )
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="mobile-form-card settings-form mt-10 space-y-4">
+      <div>
+        <h2 className="text-base font-semibold tracking-tight">Parolu dəyiş</h2>
+        <p className="mt-1 text-sm text-stone-500">
+          Ən azı 8 simvol: böyük və kiçik hərf, rəqəm.
+        </p>
+      </div>
+
+      <label className="block">
+        <span className="text-sm font-medium text-stone-700">Hazırkı parol</span>
+        <input type="password" required autoComplete="current-password" value={current}
+          onChange={e => setCurrent(e.target.value)}
+          className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium text-stone-700">Yeni parol</span>
+        <input type="password" required minLength={8} autoComplete="new-password" value={next}
+          onChange={e => setNext(e.target.value)}
+          className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium text-stone-700">Yeni parol (təkrar)</span>
+        <input type="password" required autoComplete="new-password" value={repeat}
+          onChange={e => setRepeat(e.target.value)}
+          className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
+        {mismatch && <span className="mt-1 block text-xs text-red-700">Parollar uyğun gəlmir.</span>}
+      </label>
+
+      {change.isError && (
+        <p role="alert" className="rounded bg-red-50 px-3 py-2 text-sm text-red-800">
+          {(change.error as Error).message}
+        </p>
+      )}
+
+      <button type="submit" disabled={change.isPending || mismatch}
+        className="rounded bg-emerald-800 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+        {change.isPending ? 'Dəyişdirilir…' : 'Parolu dəyiş'}
+      </button>
+      {change.isSuccess && !change.isPending && (
+        <span className="ml-3 text-sm text-emerald-800">Parol dəyişdirildi ✓</span>
+      )}
+    </form>
   )
 }

@@ -2,17 +2,41 @@ import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useLogin } from '../api/auth'
 
+/* Yalnız ÖZ saytımızın yolu qəbul edilir: kənar ünvan (`https://...`, `//evil.az`)
+   parol oğurlama yönləndirməsinə çevrilə bilərdi. */
+function safeReturnPath(raw: string | null): string | null {
+  if (!raw) return null
+  if (raw[0] !== '/' || raw[1] === '/' || raw[1] === String.fromCharCode(92)) return null
+  return raw
+}
+
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const login = useLogin()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/'
+  // Skamyadaki QR → müştəri səhifəsi → "İşçi girişi" → bura. Girişdən sonra HƏMİN
+  // səhifəyə qayıdır; artıq girişli olduğu üçün Q səhifəsi admin ekranına yönləndirir.
+  const returnPath = safeReturnPath(new URLSearchParams(window.location.search).get('qayit'))
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
-    login.mutate({ email, password }, { onSuccess: () => navigate(from, { replace: true }) })
+    login.mutate(
+      { email, password, rememberMe },
+      {
+        onSuccess: () => {
+          if (returnPath && !returnPath.startsWith('/admin')) {
+            // SPA-dan kənar səhifə (məs. /q/token) — tam yüklənmə lazımdır
+            window.location.assign(returnPath)
+            return
+          }
+          navigate(returnPath ? returnPath.replace(/^\/admin/, '') || '/' : from, { replace: true })
+        },
+      },
+    )
   }
 
   return (
@@ -55,6 +79,15 @@ export default function Login() {
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 15v2" /></svg>
               <input type="password" required autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} placeholder="••••••••" />
             </span>
+          </label>
+
+          <label className="login-remember">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={event => setRememberMe(event.target.checked)}
+            />
+            <span>Məni xatırla <small>30 gün — yalnız öz telefonunuzda işarələyin</small></span>
           </label>
 
           {login.isError && <p role="alert" className="login-error">{login.error.message}</p>}

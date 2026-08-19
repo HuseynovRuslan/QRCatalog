@@ -88,6 +88,11 @@ public static class DependencyInjection
         services.AddAuthentication(IdentityConstants.ApplicationScheme)
             .AddIdentityCookies();
 
+        // Deaktiv edilən (ya rolu dəyişən) istifadəçinin mövcud cookie-si bu intervalda
+        // etibarsızlaşır. Default 30 dəqiqədir — işdən çıxarılan işçi üçün çox uzundur.
+        services.Configure<SecurityStampValidatorOptions>(options =>
+            options.ValidationInterval = TimeSpan.FromMinutes(5));
+
         services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = "qrcatalog.auth";

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useLogout, useMe } from '../api/auth'
 import { useDashboard } from '../api/stats'
 
-type IconName = 'dashboard' | 'products' | 'categories' | 'qr' | 'sites' | 'units' | 'inquiries' | 'settings' | 'menu' | 'logout'
+type IconName = 'dashboard' | 'products' | 'categories' | 'qr' | 'sites' | 'units' | 'inquiries' | 'settings' | 'users' | 'menu' | 'logout'
 
 function Icon({ name, size = 19 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -15,13 +15,14 @@ function Icon({ name, size = 19 }: { name: IconName; size?: number }) {
     units: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
     inquiries: <><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" /><path d="M8 9h8M8 13h5" /></>,
     settings: <><path d="M4 6h7M15 6h5M4 12h3M11 12h9M4 18h9M17 18h3" /><circle cx="13" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="15" cy="18" r="2" /></>,
+    users: <><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19c.6-3.2 2.7-5 5.5-5s4.9 1.8 5.5 5" /><circle cx="17" cy="9" r="2.4" /><path d="M15.5 14.3c2.3.2 3.9 1.7 4.5 4.2" /></>,
     menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
     logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M14 3h4a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-4" /></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-const navGroups: { label: string; items: { to: string; label: string; icon: IconName }[] }[] = [
+const navGroups: { label: string; items: { to: string; label: string; icon: IconName; adminOnly?: boolean }[] }[] = [
   { label: 'Kataloq', items: [
     { to: '/', label: 'İcmal', icon: 'dashboard' }, { to: '/mehsullar', label: 'Məhsullar', icon: 'products' },
     { to: '/kateqoriyalar', label: 'Kateqoriyalar', icon: 'categories' }, { to: '/qr', label: 'QR kodlar', icon: 'qr' },
@@ -30,7 +31,10 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Icon
     { to: '/obyektler', label: 'Obyektlər', icon: 'sites' }, { to: '/vahidler', label: 'Vahidlər', icon: 'units' },
     { to: '/muracietler', label: 'Müraciətlər', icon: 'inquiries' },
   ] },
-  { label: 'Sistem', items: [{ to: '/parametrler', label: 'Parametrlər', icon: 'settings' }] },
+  { label: 'Sistem', items: [
+    { to: '/istifadeciler', label: 'İstifadəçilər', icon: 'users', adminOnly: true },
+    { to: '/parametrler', label: 'Parametrlər', icon: 'settings' },
+  ] },
 ]
 
 const pageTitles: Record<string, string> = {
@@ -66,7 +70,7 @@ export default function Shell() {
         <nav className="admin-nav" aria-label="Əsas naviqasiya">
           {navGroups.map(group => <div className="nav-group" key={group.label}>
             <p className="nav-group-label">{group.label}</p>
-            {group.items.map(item => <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `admin-nav-link ${isActive ? 'is-active' : ''}`}>
+            {group.items.filter(item => !item.adminOnly || me.data?.roles.includes('Admin')).map(item => <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `admin-nav-link ${isActive ? 'is-active' : ''}`}>
               <span className="nav-icon"><Icon name={item.icon} /></span><span>{item.label}</span>
               {item.to === '/muracietler' && (dashboard.data?.newInquiries ?? 0) > 0 && <span className="nav-badge">{dashboard.data?.newInquiries}</span>}
             </NavLink>)}

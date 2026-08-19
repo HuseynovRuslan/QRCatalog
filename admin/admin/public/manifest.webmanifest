@@ -1,0 +1,14 @@
+{
+  "name": "WOODMARK",
+  "short_name": "WOODMARK",
+  "description": "Taxta açıq hava mebeli — idarəetmə paneli",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#f5f0e6",
+  "theme_color": "#173f32",
+  "icons": [
+    { "src": "/img/woodmark-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/img/woodmark-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

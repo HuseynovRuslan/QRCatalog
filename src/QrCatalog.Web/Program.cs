@@ -182,6 +182,7 @@ try
     app.MapInquiryEndpoints();
     app.MapSiteEndpoints();
     app.MapUnitEndpoints();
+    app.MapUserEndpoints();
     app.MapStatsEndpoints();
     app.MapAuditEndpoints();
     app.MapHealthChecks("/health");

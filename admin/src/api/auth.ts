@@ -21,7 +21,7 @@ export function useMe() {
 export function useLogin() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (credentials: { email: string; password: string }) =>
+    mutationFn: (credentials: { email: string; password: string; rememberMe: boolean }) =>
       api<UserInfo>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify(credentials),
@@ -41,5 +41,17 @@ export function useLogout() {
       resetCsrfToken()
       queryClient.removeQueries({ queryKey: ['me'] })
     },
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      api<void>('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    // Parol dəyişəndə server sessiyanı yenidən imzalayır — CSRF tokeni köhnəlir
+    onSuccess: () => resetCsrfToken(),
   })
 }

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — WOODMARK</title>
     <link rel="icon" href="~/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" />
     <meta name="theme-color" content="#173f32" />
     <meta name="description" content="Açıq hava məkanları üçün seçilmiş mebel kolleksiyası." />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -49,6 +50,14 @@
                 <p class="site-footer__note">Açıq hava məkanları üçün düşünülmüş kolleksiya.</p>
             </div>
             <a href="/katalog">Kolleksiyaya bax <span aria-hidden="true">↗</span></a>
+        </div>
+        @* İşçi skamyadaki QR-ı skan edib bu linkdən girir; giriş bitəndə HƏMİN səhifəyə
+           qayıdır (qayit) və artıq girişli olduğu üçün admin ekranı açılır. Səhifə
+           keşlənsə də problem yoxdur — link hər ziyarətçi üçün eyni yoldur. Qəsdən
+           solğundur: müştəri üçün nəzərdə tutulmayıb. *@
+        <div class="site-shell site-footer__meta">
+            <a class="site-footer__staff"
+               href="/admin/login?qayit=@(Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString))">İşçi girişi</a>
         </div>
     </footer>
 

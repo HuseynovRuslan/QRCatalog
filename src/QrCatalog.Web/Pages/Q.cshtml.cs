@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using QrCatalog.Application.Abstractions;
 using QrCatalog.Domain.Entities;
+using QrCatalog.Infrastructure.Identity;
 using QrCatalog.Infrastructure.Persistence;
 using QrCatalog.Infrastructure.Scans;
 using QrCatalog.Web.Infrastructure;
@@ -73,6 +74,30 @@ public sealed class QModel : PageModel
         {
             Response.StatusCode = StatusCodes.Status404NotFound;
             return Page();
+        }
+
+        // İŞÇİ SKANI: girişli istifadəçi müştəri səhifəsi yerinə admin ekranına yönləndirilir —
+        // eyni etiket iki auditoriyaya iki fərqli ekran açır. Keş bunu POZA BİLMƏZ:
+        // output cache-in default siyasəti girişli sorğular üçün nə saxlayır, nə keşdən verir
+        // (üstəlik 302 onsuz da keşlənmir), yəni qonağın keşlənmiş 200-ü admin-ə düşmür.
+        //
+        // Yalnız ÖZ müəssisəsinin kodunda: SaaS-da B şirkətinin admini A şirkətinin etiketini
+        // skan etsə adi müştəri kimi məhsul səhifəsini görür — daxili ekran açılmır.
+        //
+        // Şərt qəsdən skan qeydindən ƏVVƏLDİR: işçinin öz yoxlama skanları müştəri
+        // statistikasına düşməməlidir, yoxsa "ən çox maraq görən model" siyahısı
+        // briqadanın marşrutunu göstərər.
+        if (User.Identity?.IsAuthenticated == true &&
+            Guid.TryParse(User.FindFirst(AppClaims.CompanyId)?.Value, out var staffCompany) &&
+            staffCompany == qrCode.CompanyId)
+        {
+            return Redirect(qrCode.TargetType switch
+            {
+                QrTargetType.Product when qrCode.TargetId is { } productId =>
+                    $"/admin/mehsullar/{productId}",
+                QrTargetType.Category => "/admin/kateqoriyalar",
+                _ => "/admin/qr",
+            });
         }
 
         HumanCode = qrCode.HumanCode;
