@@ -49,7 +49,10 @@ public sealed class SecurityHeadersMiddleware
         headers["X-Content-Type-Options"] = "nosniff";
         headers["X-Frame-Options"] = "DENY";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";
+        // geolocation=(self): işçi ekranındakı «Mövqeyi doğrula» brauzerdən mövqe
+        // istəyir. Tam bağlı siyasətdə brauzer icazə pəncərəsini HEÇ AÇMIR — istifadəçi
+        // «icazə vermədi» görür və səbəbini heç vaxt bilmir. Yalnız öz origin-imizə açıqdır.
+        headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self), payment=()";
 
         return _next(context);
     }

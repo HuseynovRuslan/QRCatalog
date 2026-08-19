@@ -64,37 +64,34 @@
                         @site.Kind@(site.Address is null ? "" : " · " + site.Address)
                     </p>
 
-                    <p class="staff-where__coords">
-                        @site.Latitude.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture),
-                        @site.Longitude.ToString("0.00000", System.Globalization.CultureInfo.InvariantCulture)
-                        <span>@(site.ExactPosition ? "nüsxənin öz mövqeyi" : "təxmini — obyektin ümumi nöqtəsi")</span>
-                    </p>
-
                     var lat = site.Latitude.ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture);
                     var lon = site.Longitude.ToString("0.000000", System.Globalization.CultureInfo.InvariantCulture);
 
-                    @* Universal xəritə linki: telefonda quraşdırılmış tətbiqi açır,
-                       yoxdursa brauzerdə göstərir. Waze/Yandex ayrıca verilir —
-                       Azərbaycanda hər ikisi geniş işlədilir. *@
-                    <a class="staff-btn staff-btn--wide"
-                       href="https://www.google.com/maps/dir/?api=1&destination=@lat,@lon"
-                       target="_blank" rel="noopener">Yol göstər</a>
-                    <p class="staff-maplinks">
-                        <a href="https://waze.com/ul?ll=@lat,@lon&navigate=yes" target="_blank" rel="noopener">Waze</a>
-                        <span>·</span>
-                        <a href="https://yandex.com/maps/?rtext=~@lat,@lon&rtt=auto" target="_blank" rel="noopener">Yandex</a>
-                    </p>
+                    @* Koordinat rəqəm kimi GÖSTƏRİLMİR — sahədə heç kim rəqəm oxumur.
+                       «Xəritədə göstər» yerində interaktiv xəritə açır (Leaflet öz
+                       serverimizdən, fon OSM); naviqasiya xəritənin altında köməkçi linkdir. *@
+                    <button type="button" class="staff-btn staff-btn--wide"
+                            data-map-toggle aria-expanded="false">Xəritədə göstər</button>
+
+                    <div class="staff-map-panel" hidden>
+                        <div id="staff-map" data-lat="@lat" data-lon="@lon"></div>
+                        <div class="staff-map-panel__foot">
+                            <span>@(site.ExactPosition ? "Dəqiq mövqe" : "Təxmini mövqe — obyektin ümumi nöqtəsi")</span>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=@lat,@lon"
+                               target="_blank" rel="noopener">Naviqasiyanı başlat</a>
+                        </div>
+                    </div>
 
                     <div class="staff-here">
                         <button type="button" class="staff-here__btn" data-here
-                                data-lat="@lat" data-lon="@lon">Buradayam? Məsafəni yoxla</button>
+                                data-lat="@lat" data-lon="@lon">Mövqeyi doğrula</button>
                         <p class="staff-here__out" data-here-result></p>
                     </div>
                 }
                 else
                 {
                     <p class="staff-empty">
-                        Bu nüsxə heç bir obyektə təyin edilməyib — qeyddə anbarda görünür.
+                        Bu avadanlıq heç bir obyektə təyin edilməyib — qeyddə anbarda görünür.
                     </p>
                 }
             </section>
@@ -149,7 +146,7 @@
                         <div><dt>Anbarda</dt><dd>@u.InStock</dd></div>
                         <div><dt>Təmirdə</dt><dd>@u.InRepair</dd></div>
                     </dl>
-                    <p class="staff-hint">Çıxarılmış nüsxələr bu cəmə daxil deyil.</p>
+                    <p class="staff-hint">Sıradan çıxarılanlar bu cəmə daxil deyil.</p>
                 </details>
 
                 @if (u.SameSiteCodes.Count > 0)
@@ -176,15 +173,15 @@
                 <details>
                     <summary>Etiket<span>@Model.HumanCode</span></summary>
                     <p class="staff-hint">
-                        Bu etiket konkret nüsxəyə bağlıdır — skan edən işçi məhz bu
-                        nüsxəni görür, müştəri isə modelin kataloq səhifəsini.
+                        Bu etiket konkret avadanlığa bağlıdır — skan edən işçi məhz onu
+                        görür, müştəri isə modelin kataloq səhifəsini.
                     </p>
                 </details>
             </section>
 
             <nav class="staff-actions">
                 <a class="staff-btn staff-btn--ghost" href="/admin/vahidler?mehsul=@u.ProductId">
-                    Bütün nüsxələr
+                    İnventar xəritəsi
                 </a>
                 @if (Model.CanEdit)
                 {
@@ -192,6 +189,8 @@
                 }
             </nav>
 
+            <link rel="stylesheet" href="~/vendor/leaflet/leaflet.css" />
+            <script src="~/vendor/leaflet/leaflet.js" defer></script>
             <script src="~/js/staff.js" asp-append-version="true" defer></script>
         }
         else if (Model.Product is { } p)
@@ -224,9 +223,9 @@
             @* Dürüstlük: model etiketi hansı nüsxənin yanında dayandığını BİLMİR.
                Bunu yazmasaq işçi ekranın cavab verə bilmədiyi sualı ona verməyə davam edər. *@
             <p class="staff-note staff-note--boxed">
-                Bu etiket <strong>modelə</strong> bağlıdır — hansı nüsxənin yanında
-                olduğunuzu göstərə bilmir. Konkret skamyanı tanımaq üçün nüsxə
-                etiketi lazımdır (hər nüsxənin öz kodu: @(p.Sku ?? "SK-…")/001).
+                Bu etiket <strong>modelə</strong> bağlıdır — yanındakı konkret avadanlığı
+                tanımır. Bunun üçün inventar etiketi lazımdır (hər avadanlığın öz
+                nömrəsi: @(p.Sku ?? "SK-…")/001).
             </p>
 
             <section class="staff-count">
@@ -289,7 +288,7 @@
                                     }
                                 </div>
                                 <details class="staff-site__codes">
-                                    <summary>Nüsxə kodları (@site.UnitCodes.Count)</summary>
+                                    <summary>İnventar nömrələri (@site.UnitCodes.Count)</summary>
                                     <p>@string.Join(" · ", site.UnitCodes)</p>
                                 </details>
                             </li>

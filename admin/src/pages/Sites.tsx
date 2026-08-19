@@ -59,7 +59,7 @@ export default function Sites() {
         lines: [
           site.address ?? '',
           ...site.items.map(item => `${item.quantity} × ${item.productName}`),
-          site.items.length === 0 ? 'vahid qeydə alınmayıb' : '',
+          site.items.length === 0 ? 'inventar qeydə alınmayıb' : '',
         ],
         color: KIND_COLOR[site.kind] ?? KIND_COLOR.Other,
       })),
@@ -120,7 +120,7 @@ export default function Sites() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Obyektlər</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Məhsulların quraşdırıldığı yerlər. {totals.sites} obyekt, {totals.units} vahid.
+            Məhsulların quraşdırıldığı yerlər. {totals.sites} obyekt, {totals.units} avadanlıq.
           </p>
         </div>
         <button
@@ -172,7 +172,7 @@ export default function Sites() {
         <p className="mt-2 text-sm text-stone-500">
           Buradaki nöqtə obyektin özüdür. Ayrı-ayrı skamya və şezlonqların dəqiq yeri{' '}
           <Link to="/vahidler" className="text-emerald-800 hover:underline">
-            Vahidlər
+            İnventar
           </Link>{' '}
           səhifəsindədir.
         </p>
@@ -306,7 +306,7 @@ export default function Sites() {
             <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
               <th className="px-3 py-2">Obyekt</th>
               <th className="px-3 py-2">Növ</th>
-              <th className="px-3 py-2">Vahidlər</th>
+              <th className="px-3 py-2">İnventar</th>
               <th className="px-3 py-2">Əlaqə</th>
               <th className="px-3 py-2"></th>
             </tr>
@@ -329,12 +329,12 @@ export default function Sites() {
                 <td data-label="Növ" className="px-3 py-2 text-stone-600">
                   {SITE_KINDS.find(k => k.value === site.kind)?.label ?? site.kind}
                 </td>
-                <td data-label="Vahidlər" className="px-3 py-2">
+                <td data-label="İnventar" className="px-3 py-2">
                   {site.items.length === 0 ? (
                     <span className="text-stone-400">—</span>
                   ) : (
                     <span>
-                      {site.totalQuantity} vahid
+                      {site.totalQuantity} əd.
                       <span className="block text-xs text-stone-400">
                         {site.items.map(i => `${i.quantity} × ${i.productName}`).join(', ')}
                       </span>
@@ -353,7 +353,7 @@ export default function Sites() {
                     onClick={event => event.stopPropagation()}
                     className="rounded px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-50"
                   >
-                    Vahidlər
+                    İnventar
                   </Link>
                   <button
                     type="button"
@@ -371,7 +371,7 @@ export default function Sites() {
                       event.stopPropagation()
                       if (
                         confirm(
-                          `«${site.name}» silinsin? Vahidlər silinmir — anbara qaytarılır.`,
+                          `«${site.name}» silinsin? İnventar silinmir — anbara qaytarılır.`,
                         )
                       )
                         remove.mutate(site.id)

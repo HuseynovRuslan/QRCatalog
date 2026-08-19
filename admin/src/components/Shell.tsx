@@ -28,7 +28,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Icon
     { to: '/kateqoriyalar', label: 'Kateqoriyalar', icon: 'categories' }, { to: '/qr', label: 'QR kodlar', icon: 'qr' },
   ] },
   { label: 'Əməliyyat', items: [
-    { to: '/obyektler', label: 'Obyektlər', icon: 'sites' }, { to: '/vahidler', label: 'Vahidlər', icon: 'units' },
+    { to: '/obyektler', label: 'Obyektlər', icon: 'sites' }, { to: '/vahidler', label: 'İnventar', icon: 'units' },
     { to: '/muracietler', label: 'Müraciətlər', icon: 'inquiries' },
   ] },
   { label: 'Sistem', items: [
@@ -39,7 +39,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Icon
 
 const pageTitles: Record<string, string> = {
   '/': 'İdarəetmə icmalı', '/mehsullar': 'Məhsullar', '/kateqoriyalar': 'Kateqoriyalar', '/qr': 'QR kodlar',
-  '/obyektler': 'Obyektlər', '/vahidler': 'Vahidlər', '/muracietler': 'Müraciətlər', '/parametrler': 'Parametrlər',
+  '/obyektler': 'Obyektlər', '/vahidler': 'İnventar', '/muracietler': 'Müraciətlər', '/parametrler': 'Parametrlər',
 }
 
 export default function Shell() {

@@ -2955,3 +2955,96 @@ a.staff-site__name {
 .staff-more .staff-hint {
     margin: 0 0 13px;
 }
+
+/* ── Premium cila + xəritə paneli (işçi ekranı) ─────────────────────────
+   Serif başlıqlar müştəri saytı ilə eyni ailədəndir — iki ekran bir brend
+   kimi görünür. Kartlar yumşaq kölgə ilə kağız hissi verir. */
+.staff-body {
+    background:
+        radial-gradient(1200px 500px at 50% -200px, rgba(23, 63, 50, .05), transparent),
+        var(--cream-50);
+}
+
+.staff-top {
+    padding: 14px 20px;
+    background: linear-gradient(160deg, var(--forest-950), var(--forest-900));
+}
+
+.staff-top__brand span {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: .12em;
+}
+
+.staff-unit-head h1,
+.staff-head h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    letter-spacing: -.02em;
+}
+
+.staff-unit-head h1 {
+    font-size: 27px;
+    line-height: 1.15;
+}
+
+.staff-unit-head__img {
+    box-shadow: 0 6px 18px rgba(20, 45, 35, .14);
+}
+
+.staff-where {
+    background:
+        radial-gradient(400px 200px at 85% -40px, rgba(200, 136, 72, .18), transparent),
+        linear-gradient(165deg, var(--forest-900), var(--forest-950));
+    box-shadow: 0 14px 34px rgba(16, 43, 35, .22);
+}
+
+.staff-where__name {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: -.015em;
+}
+
+.staff-facts dl,
+.staff-contact,
+.staff-more details,
+.staff-sites > li {
+    box-shadow: 0 1px 2px rgba(20, 45, 35, .05);
+}
+
+/* Xəritə paneli — «Xəritədə göstər» açanda */
+.staff-map-panel {
+    margin-top: 12px;
+    border-radius: 13px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .25);
+}
+
+#staff-map {
+    height: 260px;
+    /* Leaflet konteyneri hündürlüksüz sıfıra yığılır — xəritə "yoxdur" görünər */
+}
+
+.staff-map-panel__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 14px;
+    background: #fff;
+}
+
+.staff-map-panel__foot span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.staff-map-panel__foot a {
+    flex: 0 0 auto;
+    color: var(--honey-600);
+    font-size: 12.5px;
+    font-weight: 700;
+}

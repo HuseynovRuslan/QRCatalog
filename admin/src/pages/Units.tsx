@@ -69,9 +69,9 @@ export default function Units() {
     <div className="admin-page units-page">
       <div className="page-heading flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Vahidlər</h1>
+          <h1 className="text-xl font-semibold tracking-tight">İnventar</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Hər fiziki nüsxə ayrıca: {rows.length} vahid, xəritədə {onMap}, anbarda {inStock}.
+            Hər avadanlıq ayrıca qeyddə: {rows.length} ədəd, xəritədə {onMap}, anbarda {inStock}.
           </p>
         </div>
         <button
@@ -79,7 +79,7 @@ export default function Units() {
           onClick={() => setAdding(!adding)}
           className="page-primary-action rounded bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
-          {adding ? 'Bağla' : 'Vahid əlavə et'}
+          {adding ? 'Bağla' : 'İnventar əlavə et'}
         </button>
       </div>
 
@@ -268,7 +268,7 @@ export default function Units() {
             {rows.length === 0 && (
               <tr>
                 <td data-empty="true" colSpan={6} className="px-3 py-6 text-center text-stone-400">
-                  Vahid yoxdur. «Vahid əlavə et» ilə başlayın.
+                  Qeyd yoxdur. «İnventar əlavə et» ilə başlayın.
                 </td>
               </tr>
             )}
@@ -386,7 +386,7 @@ function BulkForm({
             className="mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
           />
           <span className="mt-1 block text-xs text-stone-400">
-            Nüsxələr obyektin ətrafına bu radiusda paylanır, sonra dəqiqləşdirilir.
+            Avadanlıq obyektin ətrafına bu radiusda paylanır, sonra dəqiqləşdirilir.
           </span>
         </label>
       </div>

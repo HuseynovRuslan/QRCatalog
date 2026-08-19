@@ -31,11 +31,11 @@ function BulkUnitPanel({ onClose }: { onClose: () => void }) {
         }}
         className="w-full max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-lg"
       >
-        <h2 className="text-base font-semibold">Nüsxələrə toplu kod</h2>
+        <h2 className="text-base font-semibold">İnventar etiketləri</h2>
         <p className="mt-1 text-sm text-stone-500">
-          Seçilmiş modelin hər fiziki nüsxəsinə öz QR kodu verilir. Skan edən işçi
-          məhz həmin nüsxəni görür: harada quraşdırılıb, nə vaxtdan durur, zəmanəti
-          nə vaxt bitir.
+          Seçilmiş modelin hər avadanlığına öz QR kodu verilir. Skan edən işçi
+          məhz onu görür: harada quraşdırılıb, nə vaxtdan durur, zəmanəti nə
+          vaxt bitir.
         </p>
 
         <label className="mt-4 block">
@@ -58,8 +58,8 @@ function BulkUnitPanel({ onClose }: { onClose: () => void }) {
         {result !== null && (
           <p className="mt-3 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
             {result === 0
-              ? 'Yeni kod yaradılmadı — bu modelin bütün nüsxələrində artıq kod var.'
-              : `${result} nüsxəyə kod verildi. Siyahıdan seçib çap vərəqi yükləyin.`}
+              ? 'Yeni kod yaradılmadı — bu modelin bütün avadanlığında artıq kod var.'
+              : `${result} avadanlığa kod verildi. Siyahıdan seçib çap vərəqi yükləyin.`}
           </p>
         )}
         {bulk.isError && (
@@ -240,7 +240,7 @@ export default function QrCodes() {
             onClick={() => setShowBulk(true)}
             className="rounded border border-emerald-800 px-4 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50"
           >
-            Nüsxə kodları
+            İnventar kodları
           </button>
           <button
             type="button"
@@ -298,7 +298,7 @@ export default function QrCodes() {
                       : qr.targetType === 'Category'
                         ? 'Kateqoriya'
                         : qr.targetType === 'Unit'
-                          ? 'Nüsxə'
+                          ? 'İnventar'
                           : 'Arxiv'}
                   </span>
                   {qr.targetType === 'Archive'

@@ -126,11 +126,11 @@ function SitesPanel({ productId }: { productId: string }) {
 
   return (
     <section className="mt-8">
-      <h2 className="text-base font-semibold">Hər nüsxə harada</h2>
+      <h2 className="text-base font-semibold">İnventar — hər biri harada</h2>
       <p className="mt-1 text-sm text-stone-500">
         {rows.length === 0
-          ? 'Bu modelin hələ qeydə alınmış nüsxəsi yoxdur.'
-          : `${rows.length} vahid, ${bySite.size} yer. Xəritədə hər nöqtə bir nüsxədir.`}
+          ? 'Bu modelin hələ inventar qeydi yoxdur.'
+          : `${rows.length} ədəd, ${bySite.size} yer. Xəritədə hər nöqtə bir avadanlıqdır.`}
       </p>
 
       {rows.length > 0 && (
@@ -149,7 +149,7 @@ function SitesPanel({ productId }: { productId: string }) {
             {[...bySite.entries()].map(([key, entry]) => (
               <li key={key} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <span className="font-medium">{entry.name}</span>
-                <span className="ml-auto tabular-nums">{entry.count} vahid</span>
+                <span className="ml-auto tabular-nums">{entry.count} əd.</span>
               </li>
             ))}
           </ul>
@@ -157,7 +157,7 @@ function SitesPanel({ productId }: { productId: string }) {
             to={`/vahidler?model=${productId}`}
             className="mt-3 inline-block text-sm text-emerald-800 hover:underline"
           >
-            Nüsxələri ayrı-ayrı idarə et →
+            İnventarı ayrı-ayrı idarə et →
           </Link>
         </>
       )}

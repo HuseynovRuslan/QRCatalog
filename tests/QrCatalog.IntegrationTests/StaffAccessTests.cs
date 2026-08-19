@@ -288,7 +288,7 @@ public sealed class StaffAccessTests : IAsyncLifetime
         Assert.Contains("Gəncə Xan bağı", html);       // obyekt
         Assert.Contains("Gəncə, Nizami r.", html);     // ünvan
         Assert.Contains("40.6828", html);              // koordinat
-        Assert.Contains("Yol göstər", html);           // naviqasiya
+        Assert.Contains("Xəritədə göstər", html);      // xəritə düyməsi
         // Razor «+» işarəsini &#x2B; kimi kodlayır (köhnə UTF-7 hücumlarına qarşı),
         // ona görə rəqəmlərə baxılır — «tel:» linki brauzerdə düzgün açılır.
         Assert.Contains("staff-contact", html);
